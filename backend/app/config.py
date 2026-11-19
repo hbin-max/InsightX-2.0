@@ -6,9 +6,13 @@ class Settings(BaseModel):
     version: str = "2.0.0"
     debug: bool = os.getenv("DEBUG", "False").lower() == "true"
     
-    # API Keys
-    qwen_api_key: str = os.getenv("QWEN_API_KEY", "")
-    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    # Universal LLM Configuration (OpenAI / Anthropic compatible)
+    llm_protocol: str = os.getenv("LLM_PROTOCOL", "openai")  # "openai" | "anthropic"
+    llm_base_url: str = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
+    llm_api_key: str = os.getenv("LLM_API_KEY", "")
+    llm_model: str = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    
+    # Optional Third-party Services
     youtube_api_key: str = os.getenv("YOUTUBE_API_KEY", "")
 
 settings = Settings()

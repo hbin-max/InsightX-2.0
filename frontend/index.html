@@ -553,40 +553,100 @@
     </div>
 
     <!-- Settings Modal -->
-    <div id="modal-settings" class="absolute inset-0 bg-black/75 backdrop-blur-md z-50 flex flex-col justify-end opacity-0 pointer-events-none transition-opacity duration-300">
-        <div class="bg-[#0F1118] border-t border-white/10 rounded-t-3xl p-6 transform translate-y-full transition-transform duration-300" id="modal-settings-content">
+    <div id="modal-settings" class="absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex flex-col justify-end opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-[#0D0F16] border-t border-white/10 rounded-t-3xl p-6 transform translate-y-full transition-transform duration-300 max-h-[90vh] overflow-y-auto" id="modal-settings-content">
             <div class="flex justify-between items-center mb-4">
                 <div>
-                    <h3 class="text-sm font-bold tracking-tight text-white">模型与 API 配置</h3>
-                    <p class="text-[10px] text-slate-400 mt-0.5">密钥仅保存在本地浏览器中，绝不上传任何服务器</p>
+                    <h3 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                        <i class="ph-fill ph-plugs-connected text-indigo-400"></i> API 接口与大模型配置
+                    </h3>
+                    <p class="text-[10px] text-slate-400 mt-0.5">支持兼容 OpenAI 与 Anthropic 标准协议的任意大模型端点</p>
                 </div>
                 <i class="ph ph-x text-lg text-slate-400 hover:text-white cursor-pointer" onclick="closeSettingsModal()"></i>
             </div>
 
-            <div class="flex flex-col gap-3.5 mb-5">
+            <!-- Protocol Selector -->
+            <div class="mb-3">
+                <label class="block text-[10px] font-bold text-slate-300 mb-1.5 uppercase tracking-wider font-mono-code">接口协议标准</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" class="protocol-btn p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all border-indigo-500/50 bg-indigo-500/10 text-indigo-300"
+                            id="proto-btn-openai" onclick="selectProtocol('openai')">
+                        <i class="ph-fill ph-check-circle" id="proto-icon-openai"></i> OpenAI 兼容格式
+                    </button>
+                    <button type="button" class="protocol-btn p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all border-white/5 bg-white/[0.02] text-slate-400"
+                            id="proto-btn-anthropic" onclick="selectProtocol('anthropic')">
+                        <i class="" id="proto-icon-anthropic"></i> Anthropic 格式
+                    </button>
+                </div>
+            </div>
+
+            <!-- Fast Presets -->
+            <div class="mb-3.5">
+                <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider font-mono-code">一键填充常用服务商预设</label>
+                <div class="flex flex-wrap gap-1.5">
+                    <button type="button" class="px-2 py-1 rounded-lg text-[10px] font-mono-code border border-white/10 bg-white/[0.03] text-slate-300 hover:border-indigo-400 hover:text-white transition-colors"
+                            onclick="applyPreset('deepseek')">DeepSeek (V3/R1)</button>
+                    <button type="button" class="px-2 py-1 rounded-lg text-[10px] font-mono-code border border-white/10 bg-white/[0.03] text-slate-300 hover:border-indigo-400 hover:text-white transition-colors"
+                            onclick="applyPreset('openai')">OpenAI (GPT-4o)</button>
+                    <button type="button" class="px-2 py-1 rounded-lg text-[10px] font-mono-code border border-white/10 bg-white/[0.03] text-slate-300 hover:border-indigo-400 hover:text-white transition-colors"
+                            onclick="applyPreset('anthropic')">Claude 3.5 Sonnet</button>
+                    <button type="button" class="px-2 py-1 rounded-lg text-[10px] font-mono-code border border-white/10 bg-white/[0.03] text-slate-300 hover:border-indigo-400 hover:text-white transition-colors"
+                            onclick="applyPreset('qwen')">阿里通义千问</button>
+                    <button type="button" class="px-2 py-1 rounded-lg text-[10px] font-mono-code border border-white/10 bg-white/[0.03] text-slate-300 hover:border-indigo-400 hover:text-white transition-colors"
+                            onclick="applyPreset('kimi')">月之暗面 Kimi</button>
+                    <button type="button" class="px-2 py-1 rounded-lg text-[10px] font-mono-code border border-white/10 bg-white/[0.03] text-slate-300 hover:border-indigo-400 hover:text-white transition-colors"
+                            onclick="applyPreset('siliconflow')">硅基流动</button>
+                    <button type="button" class="px-2 py-1 rounded-lg text-[10px] font-mono-code border border-white/10 bg-white/[0.03] text-slate-300 hover:border-indigo-400 hover:text-white transition-colors"
+                            onclick="applyPreset('ollama')">本地 Ollama</button>
+                </div>
+            </div>
+
+            <!-- Inputs -->
+            <div class="flex flex-col gap-3 mb-4">
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-                        <span>通义千问 (DashScope) API Key</span>
-                        <a href="https://bailian.console.aliyun.com/" target="_blank" class="text-indigo-400 text-[10px] hover:underline">获取密钥 ↗</a>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-1 flex items-center justify-between">
+                        <span>API Base URL (接口基地址)</span>
+                        <span class="text-[9px] font-mono-code text-slate-500" id="hint-base-url">例如 https://api.openai.com/v1</span>
                     </label>
-                    <input type="password" id="input-qwen" placeholder="sk-..." 
+                    <input type="text" id="input-base-url" placeholder="https://api.openai.com/v1" 
                            class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 font-mono-code text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-                        <span>YouTube Data API v3 Key (选填)</span>
-                        <a href="https://console.cloud.google.com/" target="_blank" class="text-indigo-400 text-[10px] hover:underline">申请 ↗</a>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-1 flex items-center justify-between">
+                        <span>API Key (密钥)</span>
+                        <span class="text-[9px] text-emerald-400/80">纯本地安全存储</span>
                     </label>
-                    <input type="password" id="input-youtube" placeholder="AIzaSy..." 
+                    <input type="password" id="input-api-key" placeholder="sk-..." 
+                           class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 font-mono-code text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-1 flex items-center justify-between">
+                        <span>Model Name (模型代号)</span>
+                        <span class="text-[9px] font-mono-code text-slate-500">如 deepseek-chat 或 gpt-4o-mini</span>
+                    </label>
+                    <input type="text" id="input-model" placeholder="gpt-4o-mini" 
                            class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 font-mono-code text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50">
                 </div>
             </div>
 
+            <!-- Connection Test Banner -->
+            <div class="p-2.5 rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-slate-500" id="test-status-dot"></span>
+                    <span class="text-[11px] font-mono-code text-slate-300" id="test-status-text">未测试连接</span>
+                </div>
+                <button type="button" class="px-3 py-1 rounded-lg text-xs font-bold bg-white/10 text-white hover:bg-white/15 transition-colors flex items-center gap-1"
+                        id="btn-test-connection" onclick="testApiConnection()">
+                    <i class="ph ph-lightning text-xs text-amber-400"></i> 测试连接
+                </button>
+            </div>
+
+            <!-- Actions -->
             <div class="flex gap-2.5">
-                <button class="flex-1 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-slate-300 hover:bg-white/5 transition-colors"
-                        onclick="clearApiKeys()">清空密钥</button>
+                <button class="flex-1 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                        onclick="clearApiKeys()">清空重置</button>
                 <button class="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white text-xs font-bold hover:bg-indigo-600 transition-colors shadow-[0_0_15px_rgba(99,102,241,0.4)]"
-                        onclick="saveApiKeys()">保存配置</button>
+                        onclick="saveApiKeys()">保存生效</button>
             </div>
         </div>
     </div>
@@ -607,16 +667,64 @@
 //  INSIGHTX 2.0 - OBSIDIAN ENGINE
 // ═══════════════════════════════════════════════════════════════
 
+// ── Universal LLM & API Configuration ───────────────────────────
 const CONFIG = {
-    get qwenKey()    { return localStorage.getItem('insightx_qwen_key') || ''; },
-    get youtubeKey() { return localStorage.getItem('insightx_youtube_key') || ''; }
+    get protocol()   { return localStorage.getItem('insightx_api_protocol') || 'openai'; },
+    get baseUrl()    { return localStorage.getItem('insightx_api_base_url')  || 'https://api.openai.com/v1'; },
+    get apiKey()     { return localStorage.getItem('insightx_api_key')       || ''; },
+    get model()      { return localStorage.getItem('insightx_api_model')     || 'gpt-4o-mini'; },
+    get youtubeKey() { return localStorage.getItem('insightx_youtube_key')   || ''; }
+};
+
+const PRESETS = {
+    'deepseek': {
+        protocol: 'openai',
+        baseUrl: 'https://api.deepseek.com/v1',
+        model: 'deepseek-chat',
+        hint: 'https://api.deepseek.com/v1 (DeepSeek-V3 / R1)'
+    },
+    'openai': {
+        protocol: 'openai',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4o-mini',
+        hint: 'https://api.openai.com/v1 (官方或中转端点)'
+    },
+    'anthropic': {
+        protocol: 'anthropic',
+        baseUrl: 'https://api.anthropic.com/v1',
+        model: 'claude-3-5-sonnet-20241022',
+        hint: 'https://api.anthropic.com/v1 (Anthropic 官方格式)'
+    },
+    'qwen': {
+        protocol: 'openai',
+        baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        model: 'qwen-plus',
+        hint: 'https://dashscope.aliyuncs.com/compatible-mode/v1 (阿里千问兼容格式)'
+    },
+    'kimi': {
+        protocol: 'openai',
+        baseUrl: 'https://api.moonshot.cn/v1',
+        model: 'moonshot-v1-8k',
+        hint: 'https://api.moonshot.cn/v1 (月之暗面 Kimi)'
+    },
+    'siliconflow': {
+        protocol: 'openai',
+        baseUrl: 'https://api.siliconflow.cn/v1',
+        model: 'deepseek-ai/DeepSeek-V3',
+        hint: 'https://api.siliconflow.cn/v1 (硅基流动)'
+    },
+    'ollama': {
+        protocol: 'openai',
+        baseUrl: 'http://localhost:11434/v1',
+        model: 'qwen2.5:latest',
+        hint: 'http://localhost:11434/v1 (本地免Key私有化)'
+    }
 };
 
 const API_ENDPOINTS = {
     hn_top:   'https://hacker-news.firebaseio.com/v0/topstories.json',
     hn_item:  'https://hacker-news.firebaseio.com/v0/item',
     devto:    'https://dev.to/api/articles',
-    qwen:     'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
     rss2json: 'https://api.rss2json.com/v1/api.json'
 };
 
@@ -1438,12 +1546,84 @@ function closeSourceModal() {
     modal.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
 }
 
-// ── Settings Modal ─────────────────────────────────────────────
+// ── Universal LLM Dispatcher (OpenAI & Anthropic Compatible) ──
+async function callLLM(systemPrompt, userPrompt) {
+    if (!CONFIG.apiKey && !CONFIG.baseUrl.includes('localhost') && !CONFIG.baseUrl.includes('127.0.0.1')) {
+        throw new Error('未配置 API Key');
+    }
+
+    const cleanBase = CONFIG.baseUrl.replace(/\/+$/, '');
+    const protocol  = CONFIG.protocol;
+
+    if (protocol === 'anthropic') {
+        // Anthropic Messages format
+        const endpoint = cleanBase.endsWith('/messages') ? cleanBase : `${cleanBase}/messages`;
+        const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': CONFIG.apiKey,
+                'anthropic-version': '2023-06-01',
+                'dangerously-allow-browser': 'true'
+            },
+            body: JSON.stringify({
+                model: CONFIG.model,
+                max_tokens: 4096,
+                system: systemPrompt,
+                messages: [{ role: 'user', content: userPrompt }],
+                temperature: 0.3
+            })
+        });
+
+        if (!resp.ok) {
+            const errText = await resp.text();
+            throw new Error(`Anthropic API 错误 (${resp.status}): ${errText.slice(0, 200)}`);
+        }
+        const data = await resp.json();
+        return data.content?.[0]?.text || '';
+    } else {
+        // OpenAI ChatCompletions format (default & universal standard)
+        const endpoint = cleanBase.endsWith('/chat/completions') ? cleanBase : `${cleanBase}/chat/completions`;
+        const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CONFIG.apiKey}`
+            },
+            body: JSON.stringify({
+                model: CONFIG.model,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.3
+            })
+        });
+
+        if (!resp.ok) {
+            const errText = await resp.text();
+            throw new Error(`OpenAI API 错误 (${resp.status}): ${errText.slice(0, 200)}`);
+        }
+        const data = await resp.json();
+        return data.choices?.[0]?.message?.content || '';
+    }
+}
+
+// ── Settings Modal Functions ───────────────────────────────────
+let currentSelectedProtocol = 'openai';
+
 function openSettingsModal() {
     const modal = document.getElementById('modal-settings');
     const content = document.getElementById('modal-settings-content');
-    document.getElementById('input-qwen').value = localStorage.getItem('insightx_qwen_key') || '';
-    document.getElementById('input-youtube').value = localStorage.getItem('insightx_youtube_key') || '';
+    
+    currentSelectedProtocol = CONFIG.protocol;
+    selectProtocol(currentSelectedProtocol);
+
+    document.getElementById('input-base-url').value = CONFIG.baseUrl;
+    document.getElementById('input-api-key').value  = CONFIG.apiKey;
+    document.getElementById('input-model').value     = CONFIG.model;
+
+    resetTestStatus();
     modal.classList.remove('opacity-0', 'pointer-events-none');
     setTimeout(() => content.classList.remove('translate-y-full'), 10);
 }
@@ -1455,25 +1635,150 @@ function closeSettingsModal() {
     setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
 }
 
+function selectProtocol(proto) {
+    currentSelectedProtocol = proto;
+    const btnOpenAI    = document.getElementById('proto-btn-openai');
+    const btnAnthropic = document.getElementById('proto-btn-anthropic');
+    const iconOpenAI   = document.getElementById('proto-icon-openai');
+    const iconAnthropic= document.getElementById('proto-icon-anthropic');
+
+    if (proto === 'openai') {
+        btnOpenAI.className    = 'protocol-btn p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all border-indigo-500/50 bg-indigo-500/10 text-indigo-300';
+        btnAnthropic.className = 'protocol-btn p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all border-white/5 bg-white/[0.02] text-slate-400';
+        iconOpenAI.className   = 'ph-fill ph-check-circle';
+        iconAnthropic.className= '';
+    } else {
+        btnAnthropic.className = 'protocol-btn p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all border-indigo-500/50 bg-indigo-500/10 text-indigo-300';
+        btnOpenAI.className    = 'protocol-btn p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all border-white/5 bg-white/[0.02] text-slate-400';
+        iconAnthropic.className= 'ph-fill ph-check-circle';
+        iconOpenAI.className   = '';
+    }
+}
+
+function applyPreset(key) {
+    const p = PRESETS[key];
+    if (!p) return;
+    selectProtocol(p.protocol);
+    document.getElementById('input-base-url').value = p.baseUrl;
+    document.getElementById('input-model').value    = p.model;
+    document.getElementById('hint-base-url').innerText = p.hint;
+    resetTestStatus();
+}
+
+function resetTestStatus() {
+    const dot = document.getElementById('test-status-dot');
+    const text = document.getElementById('test-status-text');
+    if (dot) dot.className = 'w-2 h-2 rounded-full bg-slate-500';
+    if (text) {
+        text.className = 'text-[11px] font-mono-code text-slate-400';
+        text.innerText = '未测试连接';
+    }
+}
+
+async function testApiConnection() {
+    const proto   = currentSelectedProtocol;
+    const baseUrl = document.getElementById('input-base-url').value.trim() || 'https://api.openai.com/v1';
+    const apiKey  = document.getElementById('input-api-key').value.trim();
+    const model   = document.getElementById('input-model').value.trim() || 'gpt-4o-mini';
+
+    const dot  = document.getElementById('test-status-dot');
+    const text = document.getElementById('test-status-text');
+    const btn  = document.getElementById('btn-test-connection');
+
+    dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping';
+    text.className = 'text-[11px] font-mono-code text-amber-300';
+    text.innerText = '测试中...';
+    btn.disabled = true;
+
+    const startTime = Date.now();
+    try {
+        const cleanBase = baseUrl.replace(/\/+$/, '');
+        let resp;
+        if (proto === 'anthropic') {
+            const endpoint = cleanBase.endsWith('/messages') ? cleanBase : `${cleanBase}/messages`;
+            resp = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'dangerously-allow-browser': 'true'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    max_tokens: 16,
+                    messages: [{ role: 'user', content: 'Ping. Output 1 word.' }],
+                    temperature: 0.1
+                })
+            });
+        } else {
+            const endpoint = cleanBase.endsWith('/chat/completions') ? cleanBase : `${cleanBase}/chat/completions`;
+            resp = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [{ role: 'user', content: 'Ping' }],
+                    max_tokens: 16,
+                    temperature: 0.1
+                })
+            });
+        }
+
+        const elapsed = Date.now() - startTime;
+        if (resp.ok) {
+            dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+            text.className = 'text-[11px] font-mono-code text-emerald-400 font-bold';
+            text.innerText = `✅ 连接正常！(${elapsed}ms)`;
+        } else {
+            const err = await resp.text();
+            dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+            text.className = 'text-[11px] font-mono-code text-rose-400';
+            text.innerText = `❌ HTTP ${resp.status}: ${err.slice(0, 40)}...`;
+        }
+    } catch(e) {
+        dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+        text.className = 'text-[11px] font-mono-code text-rose-400';
+        text.innerText = `❌ 网络/CORS错误: ${e.message.slice(0, 30)}`;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
 function saveApiKeys() {
-    const qwen = document.getElementById('input-qwen').value.trim();
-    const yt   = document.getElementById('input-youtube').value.trim();
+    const proto   = currentSelectedProtocol;
+    const baseUrl = document.getElementById('input-base-url').value.trim();
+    const apiKey  = document.getElementById('input-api-key').value.trim();
+    const model   = document.getElementById('input-model').value.trim();
 
-    if (qwen) localStorage.setItem('insightx_qwen_key', qwen);
-    else localStorage.removeItem('insightx_qwen_key');
+    localStorage.setItem('insightx_api_protocol', proto);
+    if (baseUrl) localStorage.setItem('insightx_api_base_url', baseUrl);
+    else localStorage.removeItem('insightx_api_base_url');
 
-    if (yt) localStorage.setItem('insightx_youtube_key', yt);
-    else localStorage.removeItem('insightx_youtube_key');
+    if (apiKey) localStorage.setItem('insightx_api_key', apiKey);
+    else localStorage.removeItem('insightx_api_key');
+
+    if (model) localStorage.setItem('insightx_api_model', model);
+    else localStorage.removeItem('insightx_api_model');
 
     closeSettingsModal();
     refreshCards();
 }
 
 function clearApiKeys() {
-    localStorage.removeItem('insightx_qwen_key');
-    localStorage.removeItem('insightx_youtube_key');
-    document.getElementById('input-qwen').value = '';
-    document.getElementById('input-youtube').value = '';
+    localStorage.removeItem('insightx_api_protocol');
+    localStorage.removeItem('insightx_api_base_url');
+    localStorage.removeItem('insightx_api_key');
+    localStorage.removeItem('insightx_api_model');
+
+    document.getElementById('input-base-url').value = '';
+    document.getElementById('input-api-key').value  = '';
+    document.getElementById('input-model').value     = '';
+    selectProtocol('openai');
+    resetTestStatus();
     closeSettingsModal();
     refreshCards();
 }
