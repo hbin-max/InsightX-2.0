@@ -77,7 +77,7 @@ def save_card(card: Dict[str, Any]) -> int:
         card.get("sourceType") or card.get("source_type", "article"),
         card.get("sourcePlatform") or card.get("source_platform", "web"),
         card.get("sourceTime") or card.get("source_time", "实时资讯"),
-        card.get("publishDate") or card.get("publish_date", "2025-02-18"),
+        card.get("publishDate") or card.get("publish_date", "2026-11-20"),
         card.get("url", ""),
         card.get("summary", ""),
         card.get("monetization", ""),
@@ -99,11 +99,11 @@ def save_card(card: Dict[str, Any]) -> int:
 def get_cards(sector: Optional[str] = None, limit: int = 60) -> List[Dict[str, Any]]:
     conn = get_connection()
     cursor = conn.cursor()
-    # Order by priority_score DESC (P0 -> P1 -> P2), then by ID DESC (newest first)
+    # Order by publish_date DESC (newest first), then priority_score DESC (P0 -> P1 -> P2), then id DESC
     if sector and sector not in ("all", "全部"):
-        cursor.execute("SELECT * FROM cards WHERE sector = ? ORDER BY priority_score DESC, id DESC LIMIT ?", (sector, limit))
+        cursor.execute("SELECT * FROM cards WHERE sector = ? ORDER BY publish_date DESC, priority_score DESC, id DESC LIMIT ?", (sector, limit))
     else:
-        cursor.execute("SELECT * FROM cards ORDER BY priority_score DESC, id DESC LIMIT ?", (limit,))
+        cursor.execute("SELECT * FROM cards ORDER BY publish_date DESC, priority_score DESC, id DESC LIMIT ?", (limit,))
     
     rows = cursor.fetchall()
     results = []
@@ -126,7 +126,7 @@ def get_cards(sector: Optional[str] = None, limit: int = 60) -> List[Dict[str, A
         d["sourceType"]     = d.get("source_type")
         d["sourcePlatform"] = d.get("source_platform")
         d["sourceTime"]     = d.get("source_time")
-        d["publishDate"]    = d.get("publish_date") or "2025-02-18"
+        d["publishDate"]    = d.get("publish_date") or "2026-11-20"
         d["url"]            = d.get("url") or ""
         d["useCase"]        = d.get("use_case")
         d["matrixX"]        = d.get("matrix_x")
