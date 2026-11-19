@@ -28,6 +28,8 @@ def init_db():
         source_type TEXT DEFAULT 'article',
         source_platform TEXT DEFAULT 'web',
         source_time TEXT,
+        publish_date TEXT,
+        url TEXT,
         summary TEXT,
         monetization TEXT,
         roi TEXT,
@@ -59,9 +61,9 @@ def save_card(card: Dict[str, Any]) -> int:
     cursor.execute("""
     INSERT INTO cards (
         sector, priority_level, priority_score, type, tag, heat, title, original_title, source, source_type,
-        source_platform, source_time, summary, monetization, roi, use_case,
+        source_platform, source_time, publish_date, url, summary, monetization, roi, use_case,
         friction, action, model_specs, token_pricing, audio_snippet, matrix_x, matrix_y
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         card.get("sector", "🔥 新模型速递"),
         card.get("priorityLevel", "P1"),
@@ -75,6 +77,8 @@ def save_card(card: Dict[str, Any]) -> int:
         card.get("sourceType") or card.get("source_type", "article"),
         card.get("sourcePlatform") or card.get("source_platform", "web"),
         card.get("sourceTime") or card.get("source_time", "实时资讯"),
+        card.get("publishDate") or card.get("publish_date", "2025-02-18"),
+        card.get("url", ""),
         card.get("summary", ""),
         card.get("monetization", ""),
         card.get("roi", ""),
@@ -122,6 +126,8 @@ def get_cards(sector: Optional[str] = None, limit: int = 60) -> List[Dict[str, A
         d["sourceType"]     = d.get("source_type")
         d["sourcePlatform"] = d.get("source_platform")
         d["sourceTime"]     = d.get("source_time")
+        d["publishDate"]    = d.get("publish_date") or "2025-02-18"
+        d["url"]            = d.get("url") or ""
         d["useCase"]        = d.get("use_case")
         d["matrixX"]        = d.get("matrix_x")
         d["matrixY"]        = d.get("matrix_y")
