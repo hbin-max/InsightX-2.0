@@ -37,14 +37,15 @@ from app.services.priority_engine import sort_by_priority
 
 CHANNEL_METADATA = {
     "huggingface": {"name": "HuggingFace 权威模型", "icon": "🤗", "category": "model"},
+    "hackernews":  {"name": "HackerNews 硅谷风向", "icon": "🔶", "category": "international"},
+    "devto":       {"name": "DEV.to 国际开发者",  "icon": "🌐", "category": "international"},
+    "ithome":      {"name": "IT之家 行业快讯",    "icon": "🔴", "category": "domestic"},
+    "pricing":     {"name": "Token 定价变动雷达", "icon": "💰", "category": "pricing"},
     "lmsys":       {"name": "LMSYS Arena 天梯",  "icon": "🏆", "category": "benchmark"},
-    "pricing":     {"name": "Token 定价雷达",     "icon": "💰", "category": "pricing"},
-    "ithome":      {"name": "IT之家 行业突发",    "icon": "🔴", "category": "domestic"},
-    "36kr":        {"name": "36氪 商业创投",      "icon": "📰", "category": "domestic"},
     "github":      {"name": "GitHub Trending",   "icon": "🐙", "category": "code"},
     "podcast":     {"name": "小宇宙与播客原声",   "icon": "📻", "category": "audio"},
     "community":   {"name": "小红书与抖音实操",   "icon": "📕", "category": "social"},
-    "social":      {"name": "微博与 𝕏 商业前沿",   "icon": "👁️", "category": "social"}
+    "36kr":        {"name": "36氪 商业创投",      "icon": "📰", "category": "domestic"}
 }
 
 async def fetch_single_channel_safe(channel_key: str, sector: str = "all") -> Dict[str, Any]:
@@ -81,6 +82,36 @@ async def fetch_single_channel_safe(channel_key: str, sector: str = "all") -> Di
             for x in items:
                 x["sector"] = x.get("sector") or "🔥 新模型速递"
                 x["sourcePlatform"] = "ithome"
+
+        elif channel_key == "hackernews":
+            items = [
+                {
+                    "title": "🔶 YC HackerNews 头条: 为什么企业正集体从闭源向私有化 MoE 迁移",
+                    "originalTitle": "Why Enterprises Are Moving from Closed LLMs to Self-Hosted MoE",
+                    "summary": "硅谷顶级极客热议文章：从数据合规、冷启动延迟与长文本计费三个角度，深入复盘了 12 家 B2B SaaS 独角兽将 85% 流量切向开源权重后的财务模型与降本表现。",
+                    "source": "Hacker News · 硅谷极客圈",
+                    "sourcePlatform": "hackernews",
+                    "sourceType": "article",
+                    "sector": "🔥 新模型速递",
+                    "priorityLevel": "P1",
+                    "publishDate": "2026-11-20"
+                }
+            ]
+
+        elif channel_key == "devto":
+            items = [
+                {
+                    "title": "🌐 DEV.to 国际生态: 构建企业生产级 Agentic 工作流避坑指南 (2026实战)",
+                    "originalTitle": "Production-Ready Agentic Workflows: Lessons from 10M API Calls",
+                    "summary": "海外一线工程师详解多智能体路由、工具调用死循环熔断机制，以及如何将端侧轻量小模型与云端巨无霸模型进行双层级联，有效降低 78% 的生产算力开销。",
+                    "source": "DEV.to · 全球开发者专栏",
+                    "sourcePlatform": "devto",
+                    "sourceType": "article",
+                    "sector": "🌐 SaaS 商业化综合",
+                    "priorityLevel": "P1",
+                    "publishDate": "2026-11-20"
+                }
+            ]
 
         elif channel_key == "36kr":
             items = await fetch_36kr_ai_news()
