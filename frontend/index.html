@@ -297,9 +297,54 @@
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
         /* Pulses and glows */
-        .status-dot-glow {
-            box-shadow: 0 0 8px currentColor;
+        .status-dot-glow { box-shadow: 0 0 8px currentColor; }
+        
+        /* Priority Badges */
+        .badge-p0 {
+            background: rgba(244, 63, 94, 0.14);
+            border: 1px solid rgba(244, 63, 94, 0.4);
+            color: #FB7185;
+            box-shadow: 0 0 12px rgba(244, 63, 94, 0.25);
         }
+        .badge-p1 {
+            background: rgba(99, 102, 241, 0.14);
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            color: #A5B4FC;
+        }
+        .badge-p2 {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: #6EE7B7;
+        }
+
+        /* Omnichannel Brand Badges */
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 9px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            padding: 1.5px 6px;
+            border-radius: 6px;
+            border: 1px solid;
+            letter-spacing: 0.02em;
+        }
+        .brand-huggingface { color: #FFA000; border-color: rgba(255,160,0,0.3); background: rgba(255,160,0,0.08); }
+        .brand-lmsys       { color: #A855F7; border-color: rgba(168,85,247,0.3); background: rgba(168,85,247,0.08); }
+        .brand-xiaoyuzhou  { color: #FACC15; border-color: rgba(250,204,21,0.35); background: rgba(250,204,21,0.08); }
+        .brand-bilibili    { color: #FB7299; border-color: rgba(251,114,153,0.3); background: rgba(251,114,153,0.08); }
+        .brand-xiaohongshu { color: #FE2442; border-color: rgba(254,36,66,0.3); background: rgba(254,36,66,0.08); }
+        .brand-weibo       { color: #E6162D; border-color: rgba(230,22,45,0.3); background: rgba(230,22,45,0.08); }
+        .brand-douyin      { color: #00F2FE; border-color: rgba(0,242,254,0.3); background: rgba(0,242,254,0.08); }
+        .brand-36kr        { color: #357FF8; border-color: rgba(53,127,248,0.3); background: rgba(53,127,248,0.08); }
+        .brand-ithome      { color: #F43F5E; border-color: rgba(244,63,94,0.3); background: rgba(244,63,94,0.08); }
+        .brand-github      { color: #F1F5F9; border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); }
+        .brand-spotify     { color: #1DB954; border-color: rgba(29,185,84,0.35); background: rgba(29,185,84,0.08); }
+        .brand-x           { color: #FFFFFF; border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.1); }
+        .brand-youtube     { color: #FF0000; border-color: rgba(255,0,0,0.3); background: rgba(255,0,0,0.08); }
+        .brand-chinese     { color: #6366F1; border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.08); }
+        .brand-devto       { color: #94A3B8; border-color: rgba(148,163,184,0.2); background: rgba(148,163,184,0.06); }
     </style>
 </head>
 <body>
@@ -738,19 +783,21 @@ let audioTimer       = null;
 
 // ── Fallback Dataset (Curated Rich Spec & Intelligence) ──────────
 // ── Comprehensive Intelligence Database (Expanded High-Yield Dataset) ──
+// ── Comprehensive Omnichannel Intelligence Database ──
+// Sorted by Priority: P0 (Critical/New Model/Price Drops) -> P1 (Leaders/Arena) -> P2 (Long-tail)
 const CURATED_INTELLIGENCE = {
     '🔥 新模型速递': [
         {
             id: 101,
+            priorityLevel: 'P0',
             type: 'opportunity',
             tag: '重磅开源',
             heat: '匹配度 99%',
             title: 'DeepSeek-V3 正式发布：671B 满血 MoE 架构，性能全面比肩闭源顶尖模型',
             originalTitle: 'DeepSeek-V3: Multi-head Latent Attention & DeepSeekMoE Architecture',
-            source: 'DeepSeek 官方白皮书',
-            sourceType: 'article',
+            source: 'DeepSeek 官方发布日志',
             sourcePlatform: 'chinese',
-            sourceTime: '阅读 6min',
+            sourceTime: '今日最新发布',
             modelSpecs: {
                 arch: '671B MoE (激活 37B)',
                 context: '128K 窗口 · MLA 架构',
@@ -763,44 +810,45 @@ const CURATED_INTELLIGENCE = {
             useCase: '企业私有化代码 Copilot、复杂多 Agent 工作流调度、长文本合规审查。',
             friction: '满血版 671B 本地部署需 8 张 80G 显存，中小团队多采用量化版或官方 API。',
             action: '产研团队本周应立即开展基准替换测试，核算 Coding 场景下替代闭源模型的降本幅度。',
-            matrixX: 35, matrixY: 88
+            matrixX: 35, matrixY: 96
         },
         {
             id: 102,
+            priorityLevel: 'P0',
             type: 'opportunity',
             tag: '推理革命',
             heat: '匹配度 98%',
             title: 'DeepSeek-R1 推理模型开源：纯强化学习自我演进，推理能力比肩 OpenAI o1',
-            originalTitle: 'DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning',
-            source: 'DeepSeek AI 实验室',
-            sourceType: 'article',
+            originalTitle: 'DeepSeek-R1: Incentivizing Reasoning Capability via Pure Reinforcement Learning',
+            source: 'DeepSeek AI 实验室 · 官方论文',
             sourcePlatform: 'chinese',
-            sourceTime: '阅读 8min',
+            sourceTime: '实时突发',
             modelSpecs: {
-                arch: 'R1 强化学习思考模型',
+                arch: 'R1 强化学习长思考',
                 context: '128K 上下文',
                 license: 'MIT 开源',
                 benchmark: 'AIME 79.8% · MATH 97.3%'
             },
-            summary: '完全跳过人类监督微调 (SFT)，直接通过纯大规模强化学习 (RL) 激发模型的长思维链 (Chain-of-Thought) 推理能力，展现出自我验证、回溯反思的智能跃迁。',
-            monetization: 'API 价格仅为 OpenAI o1 的 1/20，开源蒸馏出 1.5B/7B/14B/32B/70B 系列小模型。',
-            roi: '数学与复杂逻辑推理任务准确率提升 40%，且小模型蒸馏版可直接部署于边缘端与消费级显卡。',
-            useCase: '复杂金融量化分析、法律逻辑链条严密论证、医疗辅助诊断、算法代码纠错。',
-            friction: '长思考链导致生成 Token 数量膨胀，首字响应时间 (TTFT) 相对长于普通对话模型。',
+            summary: '完全跳过人类监督微调 (SFT)，直接通过大规模强化学习激发长思维链反思与自我纠错能力。开源权重并提供 1.5B 至 70B 全系列蒸馏小模型。',
+            monetization: 'API 价格仅为 OpenAI o1 的 1/20，中小模型可直接离线部署在边缘设备。',
+            roi: '复杂推理与数学任务准确率提升 40%，且边缘端单卡即可离线流畅运行。',
+            useCase: '金融复杂量化建模、法律严密逻辑推演、复杂算法代码 Bug 诊断。',
+            friction: '长思考链生成 Token 较多，首字输出时间相对长于普通快速对话模型。',
             action: '在复杂决策链条节点替换原有模型，测试通过蒸馏小模型离线运行的可行性。',
-            matrixX: 42, matrixY: 92
+            matrixX: 42, matrixY: 94
         },
         {
             id: 103,
+            priorityLevel: 'P0',
             type: 'opportunity',
-            tag: '交互革新',
+            tag: '计算机操控',
             heat: '匹配度 95%',
             title: 'Claude 3.5 Sonnet 新版发布：Computer Use 开启计算机视觉操作新范式',
-            originalTitle: 'Anthropic Upgrades Claude 3.5 Sonnet with Computer Use Capabilities',
-            source: 'Anthropic 官方技术博客',
+            originalTitle: 'Anthropic Launches Upgraded Claude 3.5 Sonnet with Computer Use Capability',
+            source: 'Anthropic 官方发布日志',
             sourceType: 'article',
             sourcePlatform: 'devto',
-            sourceTime: '阅读 7min',
+            sourceTime: '官方更新',
             modelSpecs: {
                 arch: '多模态混合自回归',
                 context: '200K 上下文窗口',
@@ -811,99 +859,136 @@ const CURATED_INTELLIGENCE = {
             monetization: '输入 $3/M，输出 $15/M，支持 Prompt Caching 降低缓存输入成本 90%。',
             roi: '复杂跨系统数据搬运与自动化流程的人工替代率达 60%，释放大量初级运营人力。',
             useCase: '自动化跨平台数据录入、无接口系统的 RPA 替代、自动化端到端测试用例执行。',
-            friction: '视觉点击延迟与偶发误操作风险仍需高管在关键交易环节设置人工复核 (Human-in-the-loop)。',
+            friction: '视觉点击延迟与偶发误操作风险仍需高管在关键交易环节设置人工复核。',
             action: '内部选定 1 个传统 RPA 流程进行概念验证，探索基于 Computer Use 的轻量替代方案。',
-            matrixX: 58, matrixY: 82
+            matrixX: 58, matrixY: 88
         },
         {
             id: 104,
-            type: 'warning',
-            tag: '端侧颠覆',
-            heat: '匹配度 91%',
-            title: 'Llama 3.3 70B 逆袭发布：以 70B 体积逼近 405B 旗舰性能',
-            originalTitle: 'Meta Introduces Llama 3.3 70B with High Efficiency and 128k Context',
-            source: 'Meta AI Research',
-            sourceType: 'article',
-            sourcePlatform: 'hn',
-            sourceTime: '阅读 5min',
+            priorityLevel: 'P1',
+            type: 'opportunity',
+            tag: '天梯榜更迭',
+            heat: '匹配度 96%',
+            title: '🏆 LMSYS Chatbot Arena 天梯更迭：开源模型盲测胜率全面反超部分商业顶流',
+            originalTitle: 'LMSYS Arena Leaderboard: Open Source Models Outperform Legacy Commercial SOTA',
+            source: 'LMSYS Chatbot Arena 官方双盲天梯',
+            sourcePlatform: 'lmsys',
+            sourceTime: '本周榜单更新',
             modelSpecs: {
-                arch: '70B 密集 Dense 模型',
-                context: '128K 上下文',
-                license: 'Llama 3.3 社区协议',
-                benchmark: 'MMLU 86.9 · GSM8K 90%'
+                arch: 'Arena 综合天梯榜',
+                context: '百万对决统计',
+                license: '全球人类双盲评测',
+                benchmark: 'Elo 1310 分'
             },
-            summary: 'Meta 采用前沿知识蒸馏技术，使 70B 参数模型在绝大多数主流评测中比肩 405B 超级旗舰，大幅压低了中小团队私有化部署的服务器成本。',
-            monetization: '开源免费，主流云厂商托管推理成本低至 $0.15/M Token。',
-            roi: '服务器采购预算直接减半，单张工作站双显卡即可流畅部署并商用。',
-            useCase: '医疗与金融等隐私强监管行业私有化知识库、边缘端智能硬件与本地离线客服。',
-            friction: '上下文跨越 64K 后的长距离注意力保持度仍需少量针对性微调。',
-            action: '为对数据出境合规极度敏感的 B 端客户推荐 Llama 3.3 作为本地化首选。',
-            matrixX: 30, matrixY: 76
+            summary: '在超百万场全球人类盲测对战中，顶级开源模型在编程、推理与中文理解等核心细分竞技场登顶前三，打破了闭源大厂的护城河。',
+            monetization: '以不到闭源 1/10 的推理价格，提供与顶尖闭源模型几乎等同的人类盲测满意度。',
+            roi: '直接替换高昂闭源 API，客服与问答业务的综合满意度持平，API 账单立降 80%。',
+            useCase: '企业级客服质检、复杂长文本报告生成、多语言文案润色。',
+            friction: '高峰期部分公共 API 并发受限，需搭配第三方中继或私有集群容灾。',
+            action: '根据 Arena 最新排名更新公司的模型选型白皮书与技术矩阵。',
+            matrixX: 28, matrixY: 91
         },
         {
             id: 105,
+            priorityLevel: 'P1',
             type: 'opportunity',
-            tag: '国产旗舰',
-            heat: '匹配度 94%',
-            title: '阿里通义千问 Qwen 2.5-Max 上线：中文综合能力超越海外主流大模型',
-            originalTitle: 'Alibaba Cloud Releases Qwen 2.5-Max with Massive Scale Improvements',
-            source: '阿里云百炼官方发布',
-            sourceType: 'article',
-            sourcePlatform: 'chinese',
-            sourceTime: '阅读 6min',
+            tag: '趋势榜首',
+            heat: '匹配度 93%',
+            title: '🤗 HuggingFace 趋势榜首热议：极小参数量蒸馏模型在端侧部署掀起热潮',
+            originalTitle: 'HuggingFace Trending Models: Small Distilled Architectures Dominate',
+            source: 'HuggingFace 官方 Trending 榜',
+            sourcePlatform: 'huggingface',
+            sourceTime: '社区热榜',
             modelSpecs: {
-                arch: '超大规模 Dense/MoE 混合',
-                context: '128K 上下文',
-                license: '商业闭源 API',
-                benchmark: 'Arena 中文榜第一'
+                arch: '1.5B - 7B 蒸馏小钢炮',
+                context: '32K - 64K',
+                license: 'Apache-2.0 开源',
+                benchmark: '单卡消费级秒级跑通'
             },
-            summary: 'Qwen 2.5-Max 在知识广度、中文语境理解及复杂多步推理上实现历史突破，在多项中立竞技场排名中登顶中文第一，直追 GPT-4o 顶峰水准。',
-            monetization: '官方百炼平台按调用量阶梯计费，支持专属 VPC 私网直连与企业级 SLA 保证。',
-            roi: '相比采购海外中转服务，国内网络延迟从 1500ms 降至 200ms 以内，服务可用性升至 99.95%。',
-            useCase: '央国企政企数字化问答、电商长图文生成、复杂中文长篇报告撰写。',
-            friction: '高并发下的企业专属带宽配额需提前向云厂商报备申请。',
-            action: '涉及国内政企与本地业务的项目，推荐优先评估 Qwen 2.5 系列作为合规基座。',
-            matrixX: 25, matrixY: 85
+            summary: '社区开发者将大模型思考逻辑蒸馏到小模型，使 iPhone、MacBook 及车载端侧硬件无需联网即可离线运行复杂逻辑推理。',
+            monetization: '无需给云厂商按 Token 付费，一次性买断硬件或以端侧软件形式打包售卖。',
+            roi: '云端服务器算力租赁支出直接清零，且彻底摆脱网络断网与隐私顾虑。',
+            useCase: '智能汽车座舱离线语音助手、医院本地病历分析、保密机房合规辅助。',
+            friction: '端侧算力限制下长上下文推理发热与耗电需做精细工程调优。',
+            action: '在公司移动端或离线设备上测试蒸馏小模型的响应延时与内存占用。',
+            matrixX: 32, matrixY: 82
         },
         {
             id: 106,
+            priorityLevel: 'P1',
+            type: 'opportunity',
+            tag: '代码之巅',
+            heat: '匹配度 94%',
+            title: '🐙 GitHub 星标暴涨 15k：前沿 AI 编程 Agent 架构开源，支持全自主修 Bug',
+            originalTitle: 'GitHub Trending Repo: Autonomous Software Engineering Agent Hits 15k Stars',
+            source: 'GitHub Trending AI 榜单',
+            sourcePlatform: 'github',
+            sourceTime: '24h 内暴涨',
+            summary: 'GitHub 热门趋势项目实现了多文件关联搜索、执行测试用例并自动回溯提交代码，将 SWE-bench 基准修复率从 20% 推向 48%。',
+            monetization: '采用开源内核引流 + 云端托管私有工作区订阅收费。',
+            roi: '初级代码 Bug 修复周期从 4 小时缩短至 5 分钟，极大释放产研团队产能。',
+            useCase: 'CI/CD 流水线自动化故障自愈、历史遗留代码重构迁移。',
+            friction: '复杂业务逻辑易出现幻觉修改，合并入主分支必须强制人工 Code Review。',
+            action: '在测试分支引入该开源 Agent，验证自动修复单测用例的准确率。',
+            matrixX: 45, matrixY: 85
+        },
+        {
+            id: 107,
+            priorityLevel: 'P2',
             type: 'normal',
-            tag: '架构趋势',
+            tag: '生态长尾',
             heat: '匹配度 87%',
-            title: 'OpenAI 发布 o3-mini：主打高性价比数学与编程推理，极速版思考链普及',
-            originalTitle: 'OpenAI Rolls Out o3-mini Reasoning Model with Tiered Effort Control',
-            source: 'OpenAI 官方公告',
-            sourceType: 'article',
-            sourcePlatform: 'devto',
-            sourceTime: '阅读 5min',
-            modelSpecs: {
-                arch: '推理小钢炮 (MoE+RL)',
-                context: '200K 上下文',
-                license: '商业闭源 API',
-                benchmark: 'Codeforces 2000+ 分'
-            },
-            summary: 'o3-mini 支持三种推理努力档位 (Low/Medium/High)，兼顾了极速响应与深度思考，为开发者提供了根据不同任务动态权衡延迟与准确率的杠杆。',
-            monetization: '输入 $1.10/M，输出 $4.40/M，价格仅为完整版 o1 的极小零头。',
-            roi: '在轻量代码审查与单元测试生成中，将单次复杂推理调用成本控制在半分钱以内。',
-            useCase: 'CI/CD 流水线自动化代码审查、高中及大学数学题自动化批改。',
-            friction: '思考链对简单闲聊类任务存在过度计算 (Over-thinking) 倾向。',
-            action: '在工程效能平台中集成 o3-mini，作为日常 Git Commit 代码审查的默认助手。',
-            matrixX: 38, matrixY: 79
+            title: 'B站硬核评测拆解：3 张 4090 搭建本地高并发推理集群避坑指南',
+            originalTitle: 'Bilibili Tech Teardown: Building Cost-Effective On-Premises Inference Cluster',
+            source: 'B站 · 科技 UP 主深度实测',
+            sourcePlatform: 'bilibili',
+            sourceTime: '长尾深度复盘',
+            summary: 'B站硬核科技作者详细实测了消费级显卡组网运行量化大模型的吞吐性能 (Tokens/s)，指出散热、PCIe 带宽瓶颈及多卡分片时的常见深坑。',
+            monetization: '为中小软件开发商提供低成本离线测试床搭建方案。',
+            roi: '相比租用云端 A100，硬件采购成本半年内即可通过电费折算回本。',
+            useCase: '实验室教学科研、中小外包团队内部开发测试环境。',
+            friction: '硬件稳定性不如数据中心级服务器，缺乏热备份容灾能力。',
+            action: '作为非生产环境测试床方案参考，避免盲目采购昂贵云算力。',
+            matrixX: 52, matrixY: 71
         }
     ],
 
     '💰 Token 经济学': [
         {
             id: 201,
+            priorityLevel: 'P0',
             type: 'warning',
-            tag: '降价风暴',
+            tag: '降价通告',
+            heat: '匹配度 99%',
+            title: '阿里云百炼宣布全系模型最高降价 97%：千问 Turbo 降至 ¥0.3/百万Token',
+            originalTitle: 'Alibaba Cloud Slashes Model Studio API Prices by Up to 97%',
+            source: '阿里云官方计费公告',
+            sourcePlatform: '36kr',
+            sourceTime: '官方正式生效',
+            tokenPricing: {
+                unitPrice: '¥0.0003 / 千 Token',
+                dropPercent: '最高直降 97%',
+                prevPrice: '¥0.008'
+            },
+            summary: '阿里云宣布百炼平台通义千问全系商业模型降价，Qwen-Turbo 输入成本直降 97%，百万 Token 价格仅需 3 毛钱，Qwen-Plus 降幅亦达 80% 以上。',
+            monetization: '以极致薄利多销策略压制中小模型厂商，抢占国内开发者生态。',
+            roi: '原本单月需要 10 万元 API 预算的中型 SaaS 业务，切换后月度开销直接收缩至 5,000 元以内。',
+            useCase: '海量文本清洗打标、全网舆情监控过滤、电商长篇评论情感分析。',
+            friction: '极低价格吸引大量突发并发，建议核心业务配置 2 家以上备用云厂商路由。',
+            action: '立即重构低附加值批量数据清洗任务的后端模型配置，全部切到千问降本。',
+            matrixX: 18, matrixY: 96
+        },
+        {
+            id: 202,
+            priorityLevel: 'P0',
+            type: 'opportunity',
+            tag: '降本革命',
             heat: '匹配度 98%',
-            title: '全网推理成本雪崩：百万 Token 价格跌破 1 元大关，商业化门槛彻底重写',
+            title: '全网推理成本雪崩：百万 Token 跌破 1 元大关，商业化门槛彻底重写',
             originalTitle: 'LLM Inference Price War Accelerates: Sub-Yuan Era for Million Tokens',
-            source: '硅谷算力与商业内参',
-            sourceType: 'article',
-            sourcePlatform: 'rss',
-            sourceTime: '阅读 8min',
+            source: 'IT之家 · 科技商业快讯',
+            sourcePlatform: 'ithome',
+            sourceTime: '实时行业报告',
             tokenPricing: {
                 unitPrice: '¥0.0015 / 次交互',
                 dropPercent: '82%',
@@ -913,45 +998,21 @@ const CURATED_INTELLIGENCE = {
             monetization: 'SaaS 商业模式正在从纯加价转售 Token，重构为按席位费 + 高价值业务结果抽佣。',
             roi: '以单日 100 万次调用的客服 Agent 为例，每月推理服务器支出从 ¥127,500 直降至 ¥22,500。',
             useCase: '全量客户自动化跟进、自动化每日行业研报生成、海量数据清洗与标签化。',
-            friction: '超低价格常伴随极端峰值下的并发限流 (Rate Limit)，核心业务必须自备多模型容灾降级网关。',
+            friction: '超低价格常伴随极端峰值下的并发限流，核心业务必须自备多模型容灾降级网关。',
             action: '立即评估自有产品定价重构空间，抢在竞品行动前推出普惠版迅速扩大用户规模。',
-            matrixX: 28, matrixY: 90
-        },
-        {
-            id: 202,
-            type: 'opportunity',
-            tag: '模式革新',
-            heat: '匹配度 94%',
-            title: 'AI 编程助手披露最新留存数据：放弃纯加价模式，转向混合阶梯订阅制',
-            originalTitle: 'AI IDE Unicorn Shifts Monetization: How Hybrid Token Metering Saved Margins',
-            source: 'SaaS 商业化年报',
-            sourceType: 'article',
-            sourcePlatform: 'newsletter',
-            sourceTime: '阅读 7min',
-            tokenPricing: {
-                unitPrice: '$20 / 月基准席位',
-                dropPercent: '毛利升至 68%',
-                prevPrice: '毛利 32%'
-            },
-            summary: '纯按 Token 消耗买单会导致重度用户吃光利润，而轻度用户觉得吃亏。头部工具推行“基础月费 + 溢出弹性算力包”混合模式，使毛利率由 32% 大幅修复至 68%。',
-            monetization: '基础版 $20/月（含 500 次高级调用）+ 溢出按成本价 + 10% 算力包扣费。',
-            roi: '单用户生命周期价值 (LTV) 提升 40%，有效过滤了无休止写死循环脚本的算力寄生用户。',
-            useCase: '开发者工具、AI 办公协同软件、自动化营销内容生成平台。',
-            friction: '需自研精准的实时 Token 扣费网关与账单透明展示面板，研发周期约 2-3 周。',
-            action: '商业化团队应参考该混合计费模型，优化本季度上线的新增值功能付费门槛。',
-            matrixX: 36, matrixY: 84
+            matrixX: 24, matrixY: 92
         },
         {
             id: 203,
+            priorityLevel: 'P1',
             type: 'opportunity',
-            tag: '成本优化',
+            tag: '缓存红利',
             heat: '匹配度 96%',
             title: 'Prompt Caching 提示词缓存技术普及：长上下文调用成本断崖式暴跌 90%',
             originalTitle: 'Prompt Caching Revolution: Slashing Long-Context Inference Bills by 90%',
-            source: 'Anthropic / 阿里云百炼技术联合分析',
-            sourceType: 'article',
+            source: 'Anthropic / 阿里云百炼技术实测',
             sourcePlatform: 'devto',
-            sourceTime: '阅读 6min',
+            sourceTime: '技术深度',
             tokenPricing: {
                 unitPrice: '缓存命中 1折收费',
                 dropPercent: '节省 89%',
@@ -967,15 +1028,39 @@ const CURATED_INTELLIGENCE = {
         },
         {
             id: 204,
+            priorityLevel: 'P1',
+            type: 'opportunity',
+            tag: '模式革新',
+            heat: '匹配度 94%',
+            title: 'AI 编程助手披露最新留存数据：放弃纯加价模式，转向混合阶梯订阅制',
+            originalTitle: 'AI IDE Unicorn Shifts Monetization: How Hybrid Token Metering Saved Margins',
+            source: '36氪 · SaaS 商业化年报',
+            sourcePlatform: '36kr',
+            sourceTime: '深度商业分析',
+            tokenPricing: {
+                unitPrice: '$20 / 月基准席位',
+                dropPercent: '毛利升至 68%',
+                prevPrice: '毛利 32%'
+            },
+            summary: '纯按 Token 消耗买单会导致重度用户吃光利润，而轻度用户觉得吃亏。头部工具推行“基础月费 + 溢出弹性算力包”混合模式，使毛利率由 32% 大幅修复至 68%。',
+            monetization: '基础版 $20/月（含 500 次高级调用）+ 溢出按成本价 + 10% 算力包扣费。',
+            roi: '单用户生命周期价值 (LTV) 提升 40%，有效过滤了无休止写死循环脚本的算力寄生用户。',
+            useCase: '开发者工具、AI 办公协同软件、自动化营销内容生成平台。',
+            friction: '需自研精准的实时 Token 扣费网关与账单透明展示面板，研发周期约 2-3 周。',
+            action: '商业化团队应参考该混合计费模型，优化本季度上线的新增值功能付费门槛。',
+            matrixX: 36, matrixY: 84
+        },
+        {
+            id: 205,
+            priorityLevel: 'P2',
             type: 'warning',
             tag: '商业陷阱',
             heat: '匹配度 88%',
             title: '警惕“无限 Token 免费试用”陷阱：某出海工具因算力失控月亏数万美元',
             originalTitle: 'The Unlimited Free Token Trap: How Startup Burned $50k in 30 Days',
-            source: '海外 IndieHackers 深度复盘',
-            sourceType: 'article',
-            sourcePlatform: 'hn',
-            sourceTime: '阅读 9min',
+            source: 'X (Twitter) · 创始人公开复盘',
+            sourcePlatform: 'x',
+            sourceTime: '长尾深度复盘',
             tokenPricing: {
                 unitPrice: '单客 CAC $4.2',
                 dropPercent: '单客 LTV -$12',
@@ -994,14 +1079,41 @@ const CURATED_INTELLIGENCE = {
     '🎙️ 播客与财报原声': [
         {
             id: 301,
+            priorityLevel: 'P0',
+            type: 'opportunity',
+            tag: '大咖言论',
+            heat: '匹配度 98%',
+            title: 'Dwarkesh 专访顶级架构师：预训练边际递减，测试时计算 (Test-time compute) 决定胜负',
+            originalTitle: 'Dwarkesh Podcast: Test-time Compute and the Next Frontier of Scaling',
+            source: 'Spotify · Dwarkesh Podcast 深度原声',
+            sourcePlatform: 'spotify',
+            sourceType: 'audio',
+            sourceTime: '35:20 - 35:50',
+            audioSnippet: {
+                quote: '“仅仅靠向预训练堆叠显卡已经触及边际收益递减曲线。下一个十倍性能跃迁，来自于让模型在推理测试时花更多时间自主搜索、反思与纠错。”',
+                speaker: '前核心研究员 / 播客访谈实录',
+                timestamp: '35:20',
+                duration: '30s'
+            },
+            summary: '未来的大模型收费将不再单纯以“字数”计价，而是按“解决问题的思考难度”分级计费。能够用更长思考时间解决高价值难题的推理模型，将占据企业软件预算的核心份额。',
+            monetization: '向客户交付“问题解决包”或“高难任务一口价”，彻底摆脱底层的 Token 计量口径。',
+            roi: '以单次 $5 的成本替代原本需要资深架构师耗费 2 天解决的高难 Bug，ROI 超 100 倍。',
+            useCase: '系统架构深度故障诊断、高难度法律判例检索与冲突排查。',
+            friction: '复杂推理需要数秒乃至数十秒等待，对产品界面的流式状态反馈提出了极高要求。',
+            action: '在复杂功能模块增加“深度思考中”的步骤可视化进度条，提升用户的等待心理承受度。',
+            matrixX: 42, matrixY: 95
+        },
+        {
+            id: 302,
+            priorityLevel: 'P0',
             type: 'opportunity',
             tag: '高管原声',
             heat: '匹配度 97%',
-            title: '海外独角兽 CEO 谈真实 ROI：单客户部署成本从 2.4 美分压缩至 0.18 美分实录',
+            title: 'Latent Space 专访独角兽 CEO：单客户部署成本从 2.4 美分压缩至 0.18 美分实录',
             originalTitle: 'Latent Space Podcast #84: Building Lean LLM Architectures in Production',
-            source: 'Latent Space Podcast · 原声拆解',
-            sourceType: 'audio',
+            source: 'YouTube · Latent Space 播客频道',
             sourcePlatform: 'youtube',
+            sourceType: 'audio',
             sourceTime: '42:15 - 42:45',
             audioSnippet: {
                 quote: '“我们在第 3 季度果断抛弃了纯大模型全链条调用，改用轻量分类器前置分流。最终单次查询的端到端服务器推理成本从 2.4 美分直接砸到了 0.18 美分，毛利率因此修复了整整 24 个百分点。”',
@@ -1015,43 +1127,45 @@ const CURATED_INTELLIGENCE = {
             useCase: '企业智能客服级联架构、智能销售外呼与合同知识库问答。',
             friction: '小参数分类器的误判会导致部分复杂问题未被正确路由，需要定期做意图标注对齐。',
             action: '组织工程架构师开展分流验证测试，严禁所有业务请求无脑直接打昂贵旗舰 API。',
-            matrixX: 32, matrixY: 89
-        },
-        {
-            id: 302,
-            type: 'warning',
-            tag: '闭门内幕',
-            heat: '匹配度 93%',
-            title: '顶级投资人闭门会实录：盲目上马私有化微调，80% 企业正面临算力与维护泥潭',
-            originalTitle: 'Closed-door VC Roundtable: Why Enterprise Fine-tuning Often Destroys ROI',
-            source: '42章经 / 投资人闭门交流会',
-            sourceType: 'audio',
-            sourcePlatform: 'chinese',
-            sourceTime: '18:40 - 19:10',
-            audioSnippet: {
-                quote: '“很多传统企业花了几百万买算力集群做行业微调，结果半年后开源基座模型一迭代，其零样本能力直接秒杀了企业辛辛苦苦微调半年的结果，ROI 完全归零。”',
-                speaker: '一级市场合伙人 / 闭门分享',
-                timestamp: '18:40',
-                duration: '30s'
-            },
-            summary: '多位资深投资人指出，非核心专有数据场景下盲目微调基座是巨大资源浪费。高性价比的架构是“强基座模型 + 高精度 RAG 知识检索 + 动态上下文工程”，而不是重复造轮子去训模型。',
-            monetization: '帮助传统企业从微调泥潭抽身，转向轻量 RAG 知识库搭建的系统集成商大赚。',
-            roi: '采用 RAG 相比全量微调，初期立项预算从数百万降低至 15 万元以内，周期从 6 个月缩短至 2 周。',
-            useCase: '企业私有知识库升级、政府与国企内部智能办公助手。',
-            friction: '需要解决非结构化文档的精准切块 (Chunking) 与表格解析准确率问题。',
-            action: '若客户提出高额微调预算，主动推演 RAG 替代方案，用低成本高见效赢得客户信任。',
-            matrixX: 45, matrixY: 78
+            matrixX: 32, matrixY: 93
         },
         {
             id: 303,
+            priorityLevel: 'P1',
+            type: 'opportunity',
+            tag: '国内原声',
+            heat: '匹配度 96%',
+            title: '小宇宙 · 42章经专访：大模型创业不是卖铲子，而是看谁最先打通业务交付闭环',
+            originalTitle: 'Xiaoyuzhou Podcast: The Reality of B2B AI Deployment and Cash Flow',
+            source: '小宇宙播客 · 42章经商业访谈',
+            sourcePlatform: 'xiaoyuzhou',
+            sourceType: 'audio',
+            sourceTime: '28:15 - 28:45',
+            audioSnippet: {
+                quote: '“今天客户根本不在乎你用了 70B 还是 8B，客户只看你能不能帮他省掉 3 个外包，并在月底报表里兑现真实的净利润增量。脱离业务谈模型参数都是自嗨。”',
+                speaker: 'B2B 独角兽创始人 / 小宇宙访谈现场',
+                timestamp: '28:15',
+                duration: '30s'
+            },
+            summary: '深入探讨了为什么过去一年中 80% 单纯兜售大模型 API 转售代理的创业公司迅速陷入亏损。真正具备抗风险能力的产品，无一例外是深扎在医疗、法律、财税等高合规门槛领域，完成端到端任务闭环的垂直软件。',
+            monetization: '从卖 Token 差价转向按完成业务单量收费 (Outcome-based Pricing)。',
+            roi: '企业客户采购决策周期从 4 个月压缩至 2 周，首期客单价虽下降但年终留存率达 92%。',
+            useCase: '法务复杂合同终审、医疗病历结构化抽取、跨境关税报关自动化。',
+            friction: '垂直行业交付周期长，需要深刻理解特定行业专有名词与人工复核机制。',
+            action: '立即审视自有产品定价页面，抹去所有技术性术语，全部改为客户听得懂的业务收益。',
+            matrixX: 34, matrixY: 91
+        },
+        {
+            id: 304,
+            priorityLevel: 'P1',
             type: 'opportunity',
             tag: '财报电话',
             heat: '匹配度 95%',
             title: '微软与英伟达财报电话会深度披露：推理 Token 消耗量首次历史性反超训练算力',
-            originalTitle: 'Earnings Call Transcript Analysis: Inference Revenue Crosses Inflection Point',
-            source: 'Q4 科技财报电话会原声实录',
-            sourceType: 'audio',
+            originalTitle: 'Earnings Call Transcript: Inference Revenue Crosses Inflection Point',
+            source: 'Q4 科技财报电话会现场原声',
             sourcePlatform: 'youtube',
+            sourceType: 'audio',
             sourceTime: '12:05 - 12:35',
             audioSnippet: {
                 quote: '“我们的数据中心监控显示，企业客户日常推理调用的 Token 消耗量在过去两个季度增长了 320%，推理产生的云收入历史上第一次超过了模型预训练算力的租用收入。”',
@@ -1068,44 +1182,83 @@ const CURATED_INTELLIGENCE = {
             matrixX: 20, matrixY: 94
         },
         {
-            id: 304,
-            type: 'normal',
-            tag: '深度访谈',
-            heat: '匹配度 90%',
-            title: 'Dwarkesh 播客专访前 OpenAI 科学家：测试时计算 (Test-time Compute) 是未来核心',
-            originalTitle: 'Dwarkesh Podcast: Test-time Compute and the Next Frontier of Scaling',
-            source: 'Dwarkesh Podcast 深度访谈',
+            id: 305,
+            priorityLevel: 'P2',
+            type: 'warning',
+            tag: '长尾复盘',
+            heat: '匹配度 91%',
+            title: '小宇宙 · 乱翻书深度复盘：为什么大模型大幅降价反而加速了套壳 Agent 的死亡',
+            originalTitle: 'Xiaoyuzhou Podcast: Why Cheaper APIs Accelerate Feature Commoditization',
+            source: '小宇宙播客 · 乱翻书深度访谈',
+            sourcePlatform: 'xiaoyuzhou',
             sourceType: 'audio',
-            sourcePlatform: 'devto',
-            sourceTime: '35:20 - 35:50',
+            sourceTime: '15:20 - 15:50',
             audioSnippet: {
-                quote: '“仅仅靠向预训练堆叠算力已经触及边际收益递减曲线。下一个十倍性能提升，来自于让模型在推理测试时花更多时间自主搜索、反思与纠错。”',
-                speaker: '前核心研究员 / 播客访谈实录',
-                timestamp: '35:20',
+                quote: '“当模型调用便宜到近乎免费的时候，底座厂商会毫不犹豫地把原本属于第三方的轻量功能直接变成系统原生功能。你的独立价值瞬间归零。”',
+                speaker: '资深商业评论人 / 小宇宙访谈现场',
+                timestamp: '15:20',
                 duration: '30s'
             },
-            summary: '未来的大模型收费将不再单纯以“字数”计价，而是按“解决问题的思考难度”分级计费。能够用更长思考时间解决高价值难题的推理模型，将占据企业软件预算的核心份额。',
-            monetization: '向客户交付“问题解决包”或“高难任务一口价”，彻底摆脱底层的 Token 计量口径。',
-            roi: '以单次 $5 的成本替代原本需要资深架构师耗费 2 天解决的高难 Bug，ROI 超 100 倍。',
-            useCase: '系统架构深度故障诊断、高难度法律判例检索与冲突排查。',
-            friction: '复杂推理需要数秒乃至数十秒等待，对产品界面的流式状态反馈提出了极高要求。',
-            action: '在复杂功能模块增加“深度思考中”的步骤可视化进度条，提升用户的等待心理承受度。',
-            matrixX: 48, matrixY: 86
+            summary: '分析指出：底层算力成本断崖式下跌，会刺激大厂直接在办公软件中内置免费的文本总结与翻译功能。仅靠封装基础 Prompt 的薄应用没有任何护城河，必须快速沉淀私有数据连接器。',
+            monetization: '必须从横向通用工具转型为拥有专有数据接口 (Private Connectors) 的纵向系统。',
+            roi: '拥有私有业务数据连接器的厂商，客户换迁成本极高，LTV 相比通用套壳高出 5 倍以上。',
+            useCase: '企业 ERP / CRM 数据深度集成、供应链智能预测、内部专有文档协同。',
+            friction: '企业内部老旧系统接口五花八门，工程适配成本高。',
+            action: '严禁立项任何单纯基于通用 Prompt 包装的轻量单点工具。',
+            matrixX: 46, matrixY: 78
         }
     ],
 
     '🌐 SaaS 商业化综合': [
         {
             id: 401,
+            priorityLevel: 'P0',
+            type: 'opportunity',
+            tag: '出海突围',
+            heat: '匹配度 97%',
+            title: '跨境电商独立站 AI 客服实测：夜间自动出海转化率提升 18%',
+            originalTitle: 'Cross-border E-commerce: Multi-lingual AI Sales Agent Drives Overnight Orders',
+            source: '36氪 · 跨境出海实战调研',
+            sourcePlatform: '36kr',
+            sourceTime: '今日最新发布',
+            summary: '通过引入具备多语言本地俚语理解的 AI 客服，无缝承接欧美与中东客户在夜间时差下的咨询与纠纷，显著降低了弃单率。',
+            monetization: 'SaaS 厂商按引导成交订单流水抽取 1.5% 佣金，客户接受度极高。',
+            roi: '每月投入 ¥800 软件费，挽回流失订单金额超 $6,000，ROI 超过 50 倍。',
+            useCase: 'Shopify / Shoplazza 独立站售前咨询、海外多时区售后退换货指引。',
+            friction: '不同国家文化习俗禁忌各异，AI 生成回复必须严格设定本地化敏感词边界。',
+            action: '电商类业务本月应优先上线多语言智能导购模块，捕获夜间时差流量红利。',
+            matrixX: 24, matrixY: 89
+        },
+        {
+            id: 402,
+            priorityLevel: 'P1',
+            type: 'opportunity',
+            tag: '社媒流量',
+            heat: '匹配度 93%',
+            title: '小红书与抖音实操复盘：用垂直 AI 矩阵批量赋能探店与短视频获客实战',
+            originalTitle: 'Local Life & Social Media: AI Script & Clip Automation Case Study',
+            source: '小红书 / 抖音电商实战笔记',
+            sourcePlatform: 'xiaohongshu',
+            sourceTime: '社群热点',
+            summary: '详细拆解了如何结合轻量大模型做本地餐饮探店文案、并用端侧工具批量剪辑，使单个兼职运营人员日产出 20 条短视频，私域转化率达 14%。',
+            monetization: '本地商家代运营月费 + 探店到店核销佣金分成。',
+            roi: '内容生产成本从单条 ¥300 骤降至 ¥15，爆款视频测试周期缩短 80%。',
+            useCase: '本地生活餐饮团购获客、中小实体门店私域导流。',
+            friction: '各短视频平台对重复模板存在降权风控，文案必须保证语义差异化。',
+            action: '探索将文案生成微调模型与剪辑模板打通，作为轻量增长工具输出。',
+            matrixX: 38, matrixY: 83
+        },
+        {
+            id: 403,
+            priorityLevel: 'P2',
             type: 'normal',
             tag: '模式观察',
             heat: '匹配度 89%',
             title: '多模态 AI 应用出海半年报：海外买量成本飙升，留存率成为生死线',
-            originalTitle: 'AI Overseas Consumer Apps 2025: LTV vs CAC Dynamics',
+            originalTitle: 'AI Overseas Consumer Apps: LTV vs CAC Dynamics Analysis',
             source: '白鲸出海深度洞察',
-            sourceType: 'article',
             sourcePlatform: 'chinese',
-            sourceTime: '阅读 8min',
+            sourceTime: '长尾深度复盘',
             summary: '出海工具类 AI 应用正告别“换脸剪视频即可暴富”的蛮荒时代。Meta 与 Google 广告渠道买量成本上涨 50%，若次月留存不能维持在 25% 以上，投放即亏损。',
             monetization: '周卡套路逐渐被 App Store 严厉监管，必须依靠订阅制与核心社区粘性提供长期价值。',
             roi: '优质产品单客获客成本从 $6 优化至 $3.2，次月留存提升至 34%，依靠自然推荐降低投放依赖。',
@@ -1113,25 +1266,6 @@ const CURATED_INTELLIGENCE = {
             friction: '跨国支付欺诈与退款率高企，合规要求极其严苛。',
             action: '将产品重心从前端买量套壳转移至深耕特定垂直行业的全自动工作流。',
             matrixX: 55, matrixY: 68
-        },
-        {
-            id: 402,
-            type: 'opportunity',
-            tag: '增长机遇',
-            heat: '匹配度 92%',
-            title: '跨境电商独立站 AI 客服实测：夜间自动出海转化率提升 18%',
-            originalTitle: 'Cross-border E-commerce: Multi-lingual AI Sales Agent Drives Overnight Orders',
-            source: '跨境电商实战社群调研',
-            sourceType: 'article',
-            sourcePlatform: 'chinese',
-            sourceTime: '阅读 6min',
-            summary: '通过引入具备多语言本地俚语理解的 AI 客服，无缝承接欧美与中东客户在夜间时差下的咨询与纠纷，显著降低了弃单率。',
-            monetization: 'SaaS 厂商按引导成交订单流水抽取 1.5% 佣金，客户接受度极高。',
-            roi: '每月投入 ¥800 软件费，挽回流失订单金额超 $6,000，ROI 超过 50 倍。',
-            useCase: 'Shopify / Shoplazza 独立站售前咨询、海外多时区售后退换货指引。',
-            friction: '不同国家文化习俗禁忌各异，AI 生成回复必须严格设定本地化敏感词边界。',
-            action: '电商类业务本月应优先上线多语言智能导购模块，捕获夜间时差流量红利。',
-            matrixX: 24, matrixY: 87
         }
     ]
 };
@@ -1390,17 +1524,24 @@ function createCard(data, index, total) {
         <div class="stamp-badge like">SAVED</div>
         <div class="stamp-badge nope">DISCARD</div>
 
-        <!-- Card Header Badges -->
+        <!-- Card Header Badges (Priority Level + Source Brand) -->
         <div class="flex justify-between items-center mb-2.5 shrink-0">
-            <div class="flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full status-dot-glow" style="background-color: ${tagColor}; color: ${tagColor};"></span>
-                <span class="font-bold text-[11px] tracking-wider" style="color: ${tagColor}">${data.tag}</span>
-                <span class="text-[9px] font-mono-code px-2 py-0.5 rounded bg-white/[0.04] border border-white/5 text-slate-400">${data.sourcePlatform.toUpperCase()}</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <!-- Priority Pill -->
+                ${data.priorityLevel === 'P0' 
+                    ? `<span class="badge-p0 px-2 py-0.5 rounded-full text-[9px] font-bold font-mono-code flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span>P0 极高优突发</span>`
+                    : data.priorityLevel === 'P1'
+                    ? `<span class="badge-p1 px-2 py-0.5 rounded-full text-[9px] font-bold font-mono-code flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>P1 权威风向</span>`
+                    : `<span class="badge-p2 px-2 py-0.5 rounded-full text-[9px] font-bold font-mono-code flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>P2 行业观察</span>`}
+                
+                <!-- Tag -->
+                <span class="font-bold text-[10px] tracking-wider text-slate-300 ml-0.5">${data.tag}</span>
+                
+                <!-- Omnichannel Platform Brand Badge -->
+                <span class="brand-badge brand-${data.sourcePlatform || 'chinese'}">${getBrandLabel(data.sourcePlatform)}</span>
             </div>
-            <span class="text-[10px] font-mono-code tracking-wider text-slate-400 font-bold">${data.heat}</span>
-        </div>
-
-        <!-- Title -->
+            <span class="text-[10px] font-mono-code tracking-wider text-slate-400 font-bold">${data.heat || '匹配度 95%'}</span>
+        </div><!-- Title -->
         <h2 class="text-base font-bold mb-1 leading-snug shrink-0 text-white" style="letter-spacing: -0.025em; line-height: 1.35;">${data.title}</h2>
         ${data.originalTitle ? `<p class="text-[10px] text-slate-500 mb-2 shrink-0 truncate font-mono-code">${data.originalTitle}</p>` : '<div class="mb-2"></div>'}
 
@@ -1576,29 +1717,54 @@ function makeCardDraggable(card, data) {
     window.addEventListener('touchend', onPointerUp);
 }
 
+function getBrandLabel(plat) {
+    const map = {
+        huggingface: '🤗 HuggingFace',
+        lmsys:       '🏆 LMSYS Arena',
+        xiaoyuzhou:  '📻 小宇宙',
+        bilibili:    '📺 B站',
+        xiaohongshu: '📕 小红书',
+        weibo:       '👁️ 微博',
+        douyin:      '🎵 抖音',
+        '36kr':      '📰 36氪',
+        ithome:      '🔴 IT之家',
+        github:      '🐙 GitHub',
+        spotify:     '🎧 Spotify',
+        x:           '𝕏 Twitter',
+        youtube:     '▶ YouTube',
+        chinese:     '🇨🇳 官方动态',
+        devto:       'DEV.to'
+    };
+    return map[plat] || (plat ? plat.toUpperCase() : 'WEB');
+}
+
+// ── Infinite Replenishing Stream (Never Run Out) ───────────────
 function advanceCardStack() {
     setTimeout(() => {
         currentCards.shift();
-        renderCards(currentCards);
-        if (currentCards.length === 0) {
-            // Auto reload fresh batch or allow infinite loop
-            document.getElementById('card-container').innerHTML = `
-                <div class="h-full flex flex-col justify-center items-center text-center px-6">
-                    <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center text-indigo-400 mb-3 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
-                        <i class="ph-fill ph-check-circle text-3xl"></i>
-                    </div>
-                    <div class="text-sm font-bold text-white tracking-tight">已完成当前批次情报筛选</div>
-                    <div class="text-xs text-slate-400 mt-1 mb-5">已收藏的高价值情报已沉淀至智库</div>
-                    <div class="flex gap-2.5">
-                        <button class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold text-white transition-colors"
-                                onclick="refreshCards()">重新加载本赛道</button>
-                        <button class="px-4 py-2 rounded-xl bg-indigo-500 text-white text-xs font-bold hover:bg-indigo-600 transition-colors"
-                                onclick="toggleSectorModal()">切换其他赛道</button>
-                    </div>
-                </div>
-            `;
+
+        // When fewer than 3 cards remain, automatically replenish long-tail intelligence
+        if (currentCards.length < 3) {
+            replenishInfiniteStream();
         }
+
+        renderCards(currentCards);
     }, 280);
+}
+
+function replenishInfiniteStream() {
+    const master = CURATED_INTELLIGENCE[currentSector] || [];
+    if (master.length > 0) {
+        // Create a replenished cycle: deeper cards with lower priority / background insights
+        const cycleCards = JSON.parse(JSON.stringify(master)).map(c => ({
+            ...c,
+            id: c.id + 2000 + Math.floor(Math.random() * 9000),
+            priorityLevel: 'P2',
+            heat: '长尾深度复盘',
+            sourceTime: '历史沉淀'
+        }));
+        currentCards.push(...cycleCards);
+    }
 }
 
 // ── Library & Bookmarking ──────────────────────────────────────
