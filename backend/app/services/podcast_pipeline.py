@@ -21,6 +21,7 @@ def fetch_xiaoyuzhou_podcast_rss() -> List[Dict[str, Any]]:
     return [
         {
             "id": 601,
+            "sector": "🎙️ 播客与财报原声",
             "type": "opportunity",
             "tag": "商业访谈",
             "heat": "匹配度 96%",
@@ -47,6 +48,7 @@ def fetch_xiaoyuzhou_podcast_rss() -> List[Dict[str, Any]]:
         },
         {
             "id": 602,
+            "sector": "🎙️ 播客与财报原声",
             "type": "warning",
             "tag": "行业内幕",
             "heat": "匹配度 94%",
@@ -80,6 +82,7 @@ def fetch_youtube_podcast_rss() -> List[Dict[str, Any]]:
     return [
         {
             "id": 603,
+            "sector": "🎙️ 播客与财报原声",
             "type": "opportunity",
             "tag": "海外原声",
             "heat": "匹配度 97%",

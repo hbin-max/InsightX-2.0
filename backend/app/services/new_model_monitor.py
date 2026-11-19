@@ -149,4 +149,6 @@ def get_all_new_model_intelligence() -> List[Dict[str, Any]]:
     items += fetch_huggingface_trending_models()
     items += fetch_lmsys_arena_leaderboard()
     items += fetch_official_changelogs()
+    for item in items:
+        item["sector"] = "🔥 新模型速递"
     return items

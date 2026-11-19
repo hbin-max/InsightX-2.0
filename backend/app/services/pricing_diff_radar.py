@@ -13,6 +13,7 @@ def get_official_pricing_diffs() -> List[Dict[str, Any]]:
     return [
         {
             "id": 501,
+            "sector": "💰 Token 经济学",
             "type": "warning",
             "tag": "降价通告",
             "heat": "匹配度 99%",
@@ -38,6 +39,7 @@ def get_official_pricing_diffs() -> List[Dict[str, Any]]:
         },
         {
             "id": 502,
+            "sector": "💰 Token 经济学",
             "type": "opportunity",
             "tag": "定价对比",
             "heat": "匹配度 97%",
@@ -62,6 +64,7 @@ def get_official_pricing_diffs() -> List[Dict[str, Any]]:
         },
         {
             "id": 503,
+            "sector": "💰 Token 经济学",
             "type": "opportunity",
             "tag": "批量特惠",
             "heat": "匹配度 93%",

@@ -62,6 +62,11 @@ ehthumbs.db
 Thumbs.db
 [Dd]esktop.ini
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
 # Logs & Temporary files
 *.log
 tmp/

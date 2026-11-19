@@ -1,8 +1,8 @@
 import json
-import httpx
 import re
 from typing import Dict, Any, Optional
 from app.config import settings
+from app.services.http_client import post_json
 
 async def call_llm(
     system_prompt: str,
@@ -14,49 +14,43 @@ async def call_llm(
 ) -> str:
     """
     通用大模型调度器：自动适配 OpenAI 兼容标准与 Anthropic 官方标准格式。
+    支持 httpx 与标准库 urllib.request 自动平滑降级。
     """
     proto = protocol or settings.llm_protocol
     url   = (base_url or settings.llm_base_url).rstrip("/")
     key   = api_key or settings.llm_api_key
     mdl   = model or settings.llm_model
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        if proto == "anthropic":
-            endpoint = url if url.endswith("/messages") else f"{url}/messages"
-            headers = {
-                "Content-Type": "application/json",
-                "x-api-key": key,
-                "anthropic-version": "2023-06-01"
-            }
-            payload = {
-                "model": mdl,
-                "max_tokens": 4096,
-                "system": system_prompt,
-                "messages": [{"role": "user", "content": user_prompt}],
-                "temperature": 0.2
-            }
-            resp = await client.post(endpoint, headers=headers, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            return data.get("content", [{}])[0].get("text", "")
-        else:
-            endpoint = url if url.endswith("/chat/completions") else f"{url}/chat/completions"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {key}"
-            }
-            payload = {
-                "model": mdl,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": 0.2
-            }
-            resp = await client.post(endpoint, headers=headers, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+    if proto == "anthropic":
+        endpoint = url if url.endswith("/messages") else f"{url}/messages"
+        headers = {
+            "x-api-key": key,
+            "anthropic-version": "2023-06-01"
+        }
+        payload = {
+            "model": mdl,
+            "max_tokens": 4096,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_prompt}],
+            "temperature": 0.2
+        }
+        data = await post_json(endpoint, payload, headers=headers, timeout=60.0)
+        return data.get("content", [{}])[0].get("text", "")
+    else:
+        endpoint = url if url.endswith("/chat/completions") else f"{url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {key}"
+        }
+        payload = {
+            "model": mdl,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": 0.2
+        }
+        data = await post_json(endpoint, payload, headers=headers, timeout=60.0)
+        return data.get("choices", [{}])[0].get("message", {}).get("content", "")
 
 async def extract_structured_card(
     title: str,
@@ -99,7 +93,6 @@ async def extract_structured_card(
             api_key=api_key,
             model=model
         )
-        # Clean potential markdown fences ```json ... ```
         cleaned = re.sub(r"^```json\s*", "", raw_resp.strip(), flags=re.IGNORECASE)
         cleaned = re.sub(r"```$", "", cleaned.strip())
         parsed = json.loads(cleaned)
@@ -109,7 +102,6 @@ async def extract_structured_card(
         return parsed
     except Exception as e:
         print(f"[LLM Extractor] Error: {e}")
-        # Graceful fallback structure if LLM parsing encounters issues
         return {
             "sector": sector,
             "type": "opportunity",

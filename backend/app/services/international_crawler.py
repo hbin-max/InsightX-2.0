@@ -1,6 +1,6 @@
-import httpx
 import re
 from typing import List, Dict, Any
+from app.services.http_client import fetch_json
 
 # ═════════════════════════════════════════════════════════════════
 #  INTERNATIONAL CRAWLER (GitHub, Spotify, X/Twitter, Instagram/Threads)
@@ -13,22 +13,20 @@ async def fetch_github_trending_ai() -> List[Dict[str, Any]]:
     url = "https://api.github.com/search/repositories?q=topic:llm+created:>2025-01-01&sort=stars&order=desc&per_page=6"
     results = []
     try:
-        async with httpx.AsyncClient(timeout=12.0, headers={"User-Agent": "InsightX-Intelligence-Radar"}) as client:
-            resp = await client.get(url)
-            if resp.status_code == 200:
-                items = resp.json().get("items", [])
-                for repo in items:
-                    name = repo.get("full_name", "")
-                    desc = repo.get("description", "") or "No description"
-                    stars = repo.get("stargazers_count", 0)
-                    results.append({
-                        "title": f"GitHub 极速暴涨开源项目: {name} (★ {stars})",
-                        "summary": f"{desc}。当前在开发者社区引起广泛关注，Star 增速位列前列。",
-                        "source": f"GitHub Trending · {name}",
-                        "sourcePlatform": "github",
-                        "sourceType": "article",
-                        "url": repo.get("html_url", "")
-                    })
+        data = await fetch_json(url, headers={"User-Agent": "InsightX-Intelligence-Radar"}, timeout=12.0)
+        items = data.get("items", [])
+        for repo in items:
+            name = repo.get("full_name", "")
+            desc = repo.get("description", "") or "No description"
+            stars = repo.get("stargazers_count", 0)
+            results.append({
+                "title": f"GitHub 极速暴涨开源项目: {name} (★ {stars})",
+                "summary": f"{desc}。当前在开发者社区引起广泛关注，Star 增速位列前列。",
+                "source": f"GitHub Trending · {name}",
+                "sourcePlatform": "github",
+                "sourceType": "article",
+                "url": repo.get("html_url", "")
+            })
     except Exception as e:
         print(f"[InternationalCrawler] GitHub fetch warning: {e}")
     return results
@@ -37,8 +35,6 @@ async def fetch_spotify_podcast_episodes() -> List[Dict[str, Any]]:
     """
     抓取 Spotify 生态顶尖播客 (Latent Space, Dwarkesh, 20VC, All-In) 的开放音频 Feed
     """
-    # 业界成熟做法：Spotify 播客同步分发在各大开放 RSS (Transistor / Megaphone) 上
-    # 提供已完成转写并带时间戳的顶级播客金句
     return [
         {
             "title": "Latent Space Podcast (Spotify 首发): 为什么小模型级联路由是未来商业化的唯一解",
@@ -94,8 +90,13 @@ async def crawl_international_all(sector: str) -> List[Dict[str, Any]]:
     """
     聚合抓取海外所有平台
     """
-    items = []
-    items += await fetch_github_trending_ai()
-    items += await fetch_spotify_podcast_episodes()
-    items += await fetch_x_thought_leaders()
-    return items
+    gh = await fetch_github_trending_ai()
+    for x in gh: x["sector"] = "🔥 新模型速递"
+
+    sp = await fetch_spotify_podcast_episodes()
+    for x in sp: x["sector"] = "🎙️ 播客与财报原声"
+
+    x_tw = await fetch_x_thought_leaders()
+    for x in x_tw: x["sector"] = "🔥 新模型速递"
+
+    return gh + sp + x_tw
