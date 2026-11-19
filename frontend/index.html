@@ -1402,10 +1402,28 @@ async function generateAICards(sector) {
     // Deep clone to prevent currentCards.shift() from permanently destroying CURATED_INTELLIGENCE
     currentCards = JSON.parse(JSON.stringify(masterCards));
 
+    // Try live fetch from local backend if available (1.2s timeout)
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1200);
+        const res = await fetch(`http://localhost:8000/api/cards?sector=${encodeURIComponent(sector)}`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+            const liveCards = await res.json();
+            if (Array.isArray(liveCards) && liveCards.length > 0) {
+                const existingTitles = new Set(liveCards.map(c => c.title));
+                const remainingMaster = currentCards.filter(c => !existingTitles.has(c.title));
+                currentCards = [...liveCards, ...remainingMaster];
+            }
+        }
+    } catch (e) {
+        // Backend offline or timeout; seamlessly use local curated intelligence
+    }
+
     container.style.opacity = '0';
     await delay(200);
 
-    renderCards(cards);
+    renderCards(currentCards);
 
     container.style.opacity = '1';
     container.style.transform = 'translateY(0) scale(1)';
@@ -1915,7 +1933,6 @@ function renderMatrixView() {
 【商业建议】${first.action}`;
         document.getElementById('matrix-detail-dot').style.backgroundColor = first.type === 'warning' ? '#F59E0B' : first.type === 'opportunity' ? '#10B981' : '#6366F1';
     }
-}
 }
 
 // ── Source Modal ───────────────────────────────────────────────
