@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 from app.config import settings
 from app.db import init_db, save_card, get_cards, count_cards_by_sector
-from app.services.crawler import crawl_raw_intelligence
+from app.services.crawler import crawl_raw_intelligence, crawl_omnichannel_with_telemetry, CHANNEL_METADATA
 from app.services.llm_extractor import test_llm_connection, extract_structured_card
 
 @asynccontextmanager
@@ -135,6 +135,54 @@ async def custom_extract(req: CustomExtractRequest):
     new_id = save_card(card_data)
     card_data["id"] = new_id
     return {"status": "ok", "card": card_data}
+
+# In-memory telemetry log storage for backend
+_TELEMETRY_LOGS: List[Dict[str, Any]] = []
+
+@app.get("/api/omni-feed")
+async def get_omni_feed(sector: str = "all"):
+    """
+    全端口并发扫描接口：并发检索 9 大端口，不忽略任何一个，附带详细耗时与状态遥测报告
+    """
+    res = await crawl_omnichannel_with_telemetry(sector=sector)
+    return res
+
+@app.get("/api/channels/status")
+async def get_channels_status():
+    """
+    获取 9 大情报检索端口的元数据与连通状态
+    """
+    return {
+        "status": "ok",
+        "channels": [
+            {"id": k, **v} for k, v in CHANNEL_METADATA.items()
+        ]
+    }
+
+class TelemetryBatchRequest(BaseModel):
+    events: List[Dict[str, Any]]
+
+@app.post("/api/telemetry")
+async def ingest_telemetry(req: TelemetryBatchRequest):
+    """
+    接收前端客户端或小程序上报的遥测与异常日志
+    """
+    global _TELEMETRY_LOGS
+    _TELEMETRY_LOGS.extend(req.events)
+    if len(_TELEMETRY_LOGS) > 1000:
+        _TELEMETRY_LOGS = _TELEMETRY_LOGS[-1000:]
+    return {"status": "ok", "ingested": len(req.events)}
+
+@app.get("/api/telemetry")
+async def get_telemetry(limit: int = 100):
+    """
+    查询最新遥测与异常日志
+    """
+    return {
+        "status": "ok",
+        "total": len(_TELEMETRY_LOGS),
+        "logs": _TELEMETRY_LOGS[-limit:]
+    }
 
 @app.post("/api/test-connection")
 async def test_endpoint(req: ConnectionTestRequest):
