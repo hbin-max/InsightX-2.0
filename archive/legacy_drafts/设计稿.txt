@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>InsightX - AI 商业情报参谋 (Premium v2)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- 引入 Noto Sans SC (黑体) 和 JetBrains Mono (等宽) -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* 高级感低饱和度色系 (Nord-inspired Dark Theme) */
+        :root {
+            --bg-base: #0F1115;
+            --bg-card: #1C1E26;
+            --bg-panel: #232731;
+            --border-color: #2E3440;
+            --text-main: #E5E9F0;
+            --text-muted: #8F9BAD;
+            
+            --color-primary: #81A1C1;
+            --color-success: #8FBC8B;
+            --color-warning: #D08770;
+            --color-highlight: #EBCB8B;
+        }
+
+        body {
+            /* 全局默认采用黑体 */
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #000;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            touch-action: none;
+            color: var(--text-main);
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* 仅在开始页、加载页保留的等宽字体类 */
+        .font-mono-special { font-family: 'JetBrains Mono', monospace; }
+        
+        /* 移动端容器限制 */
+        #app-container {
+            width: 100%;
+            max-width: 430px;
+            height: 100%;
+            max-height: 932px;
+            background-color: var(--bg-base);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        }
+
+        ::-webkit-scrollbar { width: 4px; background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+        /* 通用屏幕切换动画 */
+        .screen {
+            position: absolute;
+            inset: 0;
+            transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+        .screen.hidden-screen {
+            opacity: 0;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* 视图切换 */
+        .view-content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .view-content.active { display: flex; flex-direction: column; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 卡片动画与样式 */
+        .card-stack {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            perspective: 1000px;
+        }
+        .insight-card {
+            position: absolute;
+            width: calc(100% - 32px);
+            height: calc(100% - 16px);
+            left: 16px;
+            top: 8px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+            transform-origin: 50% 100%;
+            will-change: transform;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease;
+            user-select: none;
+        }
+        .insight-card.dragging { transition: none; }
+
+        .badge {
+            position: absolute;
+            top: 40px;
+            padding: 6px 14px;
+            border: 2px solid;
+            border-radius: 6px;
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            opacity: 0;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+        .badge.like { left: 20px; color: var(--color-success); border-color: var(--color-success); background: rgba(143,188,139,0.1); transform: rotate(-15deg); }
+        .badge.nope { right: 20px; color: var(--text-muted); border-color: var(--text-muted); background: rgba(143,155,173,0.1); transform: rotate(15deg); }
+
+        /* 脉冲动画 */
+        .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        
+        .pulse-ring {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 28px; height: 28px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid var(--node-color);
+            animation: ping 2.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        @keyframes ping {
+            75%, 100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+        }
+
+        /* 全新矩阵散点样式 */
+        .matrix-node {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .matrix-node .core-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background-color: var(--node-color);
+            box-shadow: 0 0 12px var(--node-color);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 2;
+        }
+        .matrix-node:hover .core-dot, .matrix-node.active .core-dot {
+            transform: scale(1.6);
+        }
+        .matrix-node .node-label {
+            position: absolute;
+            top: 18px;
+            white-space: nowrap;
+            font-size: 10px;
+            font-weight: bold;
+            color: var(--text-main);
+            background: rgba(15, 17, 21, 0.85);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.1);
+            pointer-events: none;
+            backdrop-filter: blur(2px);
+            z-index: 3;
+            transition: opacity 0.2s;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+
+    <!-- Screen 0: Splash 欢迎页 -->
+    <div id="screen-splash" class="screen hidden-screen justify-center items-center z-50">
+        <i class="ph-fill ph-target text-5xl mb-4" style="color: var(--color-primary);"></i>
+        <h1 class="text-3xl font-light tracking-wide mb-2 font-mono-special">Insight<span class="font-bold" style="color: var(--color-primary);">X</span></h1>
+        <p class="text-[10px] tracking-[0.3em] uppercase font-mono-special mt-4 pulse" style="color: var(--text-muted);">Syncing Intelligence...</p>
+    </div>
+
+    <!-- Screen 1: Onboarding 首次进入选择页 -->
+    <div id="screen-onboarding" class="screen hidden-screen justify-center px-8 z-50">
+        <div class="mb-10">
+            <h1 class="text-3xl font-light tracking-wide mb-2 font-mono-special">Insight<span class="font-bold" style="color: var(--color-primary);">X</span></h1>
+            <p class="text-sm tracking-wider uppercase font-mono-special" style="color: var(--text-muted);">AI Business Intelligence</p>
+        </div>
+
+        <div class="p-6 rounded-2xl border" style="background-color: var(--bg-card); border-color: var(--border-color);">
+            <h2 class="text-lg font-medium mb-8 leading-relaxed">
+                你当前最焦虑被AI颠覆、或最想用AI变现的业务场景是什么？<span class="inline-block w-2 h-4 align-middle ml-1 bg-[var(--color-primary)] pulse"></span>
+            </h2>
+            
+            <div class="space-y-4">
+                <button class="w-full text-left px-5 py-4 rounded-xl border transition-all duration-300 group flex justify-between items-center" 
+                        style="border-color: var(--border-color); background-color: var(--bg-base);"
+                        onclick="completeOnboarding('SaaS商业化')">
+                    <span class="font-bold text-sm">SaaS商业化 / 出海</span>
+                    <i class="ph ph-arrow-right" style="color: var(--color-primary);"></i>
+                </button>
+                <button class="w-full text-left px-5 py-4 rounded-xl border transition-all duration-300 group flex justify-between items-center" 
+                        style="border-color: var(--border-color); background-color: var(--bg-base);"
+                        onclick="completeOnboarding('教育新媒体')">
+                    <span class="font-bold text-sm">职业教育 / 新媒体获客</span>
+                    <i class="ph ph-arrow-right" style="color: var(--color-primary);"></i>
+                </button>
+                <!-- Req 1: 补充缺失的“本地生活 / 电商变现” -->
+                <button class="w-full text-left px-5 py-4 rounded-xl border transition-all duration-300 group flex justify-between items-center" 
+                        style="border-color: var(--border-color); background-color: var(--bg-base);"
+                        onclick="completeOnboarding('本地生活电商')">
+                    <span class="font-bold text-sm">本地生活 / 电商变现</span>
+                    <i class="ph ph-arrow-right" style="color: var(--color-primary);"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen 2: 核心主容器 (已彻底移除 font-mono，统一使用无衬线黑体) -->
+    <div id="screen-main" class="screen hidden-screen">
+        
+        <!-- Top Nav -->
+        <div class="h-[64px] flex justify-between items-center px-5 border-b shrink-0 z-20" style="border-color: var(--border-color); background-color: var(--bg-base);">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="toggleSectorModal()">
+                <i class="ph ph-squares-four text-2xl" style="color: var(--text-muted);"></i>
+                <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors hover:bg-[var(--bg-panel)]" style="background-color: var(--bg-card); border-color: var(--border-color);">
+                    <span class="text-sm font-bold" id="current-sector-label">SaaS商业化</span>
+                    <i class="ph-fill ph-caret-down text-[10px]" style="color: var(--text-muted);"></i>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center border" style="border-color: var(--border-color);">
+                    <i class="ph ph-bell text-lg" style="color: var(--text-muted);"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== View 1: 情报流 (Triage Cards) ====== -->
+        <div id="view-feed" class="view-content active">
+            <div class="card-stack" id="card-container"></div>
+        </div>
+
+        <!-- ====== View 2: 全新高保真矩阵视图 (Matrix) ====== -->
+        <div id="view-matrix" class="view-content bg-[var(--bg-base)]">
+            <div class="px-5 pt-5 pb-2 shrink-0">
+                <h2 class="text-xl font-bold mb-1 tracking-wide">AI 商业化落地矩阵</h2>
+                <p class="text-[11px] opacity-60">实时更新全网数据，辅助投资与立项决策</p>
+            </div>
+            
+            <div class="flex-1 px-5 pb-5 flex flex-col pt-2">
+                <!-- 矩阵图表区域 -->
+                <div class="relative flex-1 border-l-2 border-b-2 rounded-bl-sm mb-4 bg-[var(--bg-card)] overflow-hidden shadow-[inset_0_4px_20px_rgba(0,0,0,0.3)]" style="border-color: var(--border-color);">
+                    
+                    <!-- 四象限色彩背景 -->
+                    <div class="absolute inset-0 grid grid-cols-2 grid-rows-2">
+                        <div class="border-r border-b flex justify-end items-end p-2" style="border-color: var(--border-color); background-color: rgba(143,188,139,0.06);">
+                            <span class="text-[10px] opacity-40 font-bold tracking-widest">🌟 高潜探索区</span>
+                        </div>
+                        <div class="border-b flex justify-start items-end p-2" style="border-color: var(--border-color); background-color: rgba(129,161,193,0.12);">
+                            <span class="text-[10px] opacity-60 font-bold tracking-widest" style="color: var(--color-primary);">💰 核心印钞机</span>
+                        </div>
+                        <div class="border-r flex justify-end items-start p-2" style="border-color: var(--border-color); background-color: rgba(208,135,112,0.06);">
+                            <span class="text-[10px] opacity-40 font-bold tracking-widest">⚠️ 概念泡沫区</span>
+                        </div>
+                        <div class="flex justify-start items-start p-2" style="background-color: rgba(235,203,139,0.04);">
+                            <span class="text-[10px] opacity-40 font-bold tracking-widest">🧰 红海基建区</span>
+                        </div>
+                    </div>
+
+                    <!-- 细颗粒度网格线 -->
+                    <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(var(--text-main) 1px, transparent 1px), linear-gradient(90deg, var(--text-main) 1px, transparent 1px); background-size: 10% 10%;"></div>
+                    
+                    <!-- 坐标系说明 -->
+                    <div class="absolute bottom-1 right-2 text-[10px] opacity-50 tracking-wider font-bold">技术成熟度 ➔</div>
+                    <div class="absolute top-2 left-1 text-[10px] opacity-50 tracking-wider font-bold [writing-mode:vertical-rl] rotate-180">商业变现潜力 ➔</div>
+
+                    <!-- 散点数据节点 (Req 4: 信息密度与美观度提升) -->
+                    <div class="matrix-node" style="left: 85%; top: 20%; --node-color: var(--color-success);" onclick="showMatrixDetail('客服 Agent 私有化部署', '技术极其成熟，直击企业降本痛点。随着底层大模型API降价，整体ROI已全面跑通，建议重仓投入并抢占大客户。', 'var(--color-success)')">
+                        <div class="pulse-ring"></div>
+                        <div class="core-dot"></div>
+                        <span class="node-label">客服Agent</span>
+                    </div>
+
+                    <div class="matrix-node" style="left: 65%; top: 35%; --node-color: var(--color-primary);" onclick="showMatrixDetail('代码 Copilot / AI IDE', 'B端与极客开发者付费意愿极强，留存率高。但底层过度依赖外部闭源大模型，存在被生态巨头直接封杀的系统性风险。', 'var(--color-primary)')">
+                        <div class="core-dot"></div>
+                        <span class="node-label">代码Copilot</span>
+                    </div>
+
+                    <div class="matrix-node" style="left: 20%; top: 80%; --node-color: var(--color-warning);" onclick="showMatrixDetail('文生视频套壳应用', '底层模型迭代过快导致C端套壳应用技术壁垒全无，LTV/CAC(用户生命周期价值/获客成本)严重倒挂，属于高危红海区。', 'var(--color-warning)')">
+                        <div class="core-dot"></div>
+                        <span class="node-label">视频套壳</span>
+                    </div>
+                    
+                    <div class="matrix-node" style="left: 80%; top: 70%; --node-color: var(--text-muted);" onclick="showMatrixDetail('通用闲聊机器人', '技术栈已基本完成基建化，C端通用流量已被头部大厂瓜分完毕，缺乏垂直行业数据积累，难以形成有效商业闭环。', 'var(--text-muted)')">
+                        <div class="core-dot"></div>
+                        <span class="node-label">通用对话</span>
+                    </div>
+
+                    <div class="matrix-node" style="left: 30%; top: 25%; --node-color: var(--color-highlight);" onclick="showMatrixDetail('具身智能 / Robotics', '未来长期商业想象空间巨大，但目前软硬件解耦技术极不成熟，供应链成本高昂，仍处于早期实验室Demo或概念探索阶段。', 'var(--color-highlight)')">
+                        <div class="pulse-ring" style="animation-duration: 3s"></div>
+                        <div class="core-dot"></div>
+                        <span class="node-label">具身智能</span>
+                    </div>
+                </div>
+
+                <!-- 底部详情解说面板 -->
+                <div class="h-[110px] rounded-xl border p-4 flex flex-col justify-center transition-all duration-300 shrink-0" id="matrix-detail-panel" style="background-color: var(--bg-panel); border-color: var(--border-color);">
+                    <div class="text-sm opacity-50 flex items-center justify-center h-full gap-2 font-bold tracking-wide">
+                        <i class="ph ph-hand-tap text-xl pulse"></i> 点击上方矩阵节点查看深度解析
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== View 3: 深度智库 (Library) ====== -->
+        <div id="view-library" class="view-content p-5">
+            <h2 class="text-xl font-bold mb-4 flex justify-between items-center">
+                <span>我的智库</span>
+                <span class="text-xs px-2 py-1 rounded font-bold tracking-wider" style="background: var(--bg-panel); color: var(--color-primary);" id="saved-count">0 条归档</span>
+            </h2>
+            <div class="flex-1 overflow-y-auto space-y-3 pb-6 scrollbar-hide" id="library-list">
+                <!-- Saved items rendered here via JS -->
+                <div id="empty-library" class="h-full flex flex-col justify-center items-center text-center opacity-50">
+                    <i class="ph ph-folder-open text-4xl mb-2"></i>
+                    <p class="text-sm font-bold">智库空空如也</p>
+                    <p class="text-xs mt-1">在情报流中右滑即可收藏卡片</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="h-[64px] flex justify-around items-center border-t shrink-0 z-20 pb-2" style="border-color: var(--border-color); background-color: var(--bg-base);">
+            <div class="nav-item flex flex-col items-center mt-2 cursor-pointer w-1/3" data-target="view-feed" style="color: var(--color-primary);">
+                <i class="ph-fill ph-stack text-2xl mb-1 transition-transform"></i>
+                <span class="text-[10px] font-bold tracking-wide">情报流</span>
+            </div>
+            <div class="nav-item flex flex-col items-center mt-2 cursor-pointer w-1/3 transition-colors" data-target="view-matrix" style="color: var(--text-muted);">
+                <i class="ph ph-chart-scatter text-2xl mb-1 transition-transform"></i>
+                <span class="text-[10px] font-bold tracking-wide">矩阵视图</span>
+            </div>
+            <div class="nav-item flex flex-col items-center mt-2 cursor-pointer w-1/3 transition-colors relative" data-target="view-library" style="color: var(--text-muted);">
+                <i class="ph ph-bookmarks text-2xl mb-1 transition-transform"></i>
+                <span class="text-[10px] font-bold tracking-wide">深度智库</span>
+                <!-- 红点提示 -->
+                <div id="library-dot" class="absolute top-0 right-[25%] w-2 h-2 rounded-full opacity-0 transition-opacity" style="background-color: var(--color-warning);"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ====== Modals & Overlays ====== -->
+    
+    <!-- 赛道切换弹窗 -->
+    <div id="modal-sector" class="absolute inset-0 bg-black/70 z-50 flex flex-col justify-end opacity-0 pointer-events-none transition-opacity">
+        <div class="bg-[var(--bg-card)] rounded-t-2xl p-6 transform translate-y-full transition-transform duration-300" id="modal-sector-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold tracking-wide">切换关注赛道</h3>
+                <i class="ph ph-x text-xl cursor-pointer" onclick="toggleSectorModal()"></i>
+            </div>
+            <div class="space-y-3 mb-4">
+                <button class="w-full text-left px-4 py-3 rounded-xl border flex justify-between items-center sector-option" style="border-color: var(--color-primary); color: var(--color-primary); background: var(--bg-panel);" onclick="switchSector('SaaS商业化')">
+                    <span class="font-bold">SaaS商业化 / 出海</span> <i class="ph-fill ph-check-circle"></i>
+                </button>
+                <button class="w-full text-left px-4 py-3 rounded-xl border flex justify-between items-center sector-option" style="border-color: var(--border-color);" onclick="switchSector('教育新媒体')">
+                    <span class="font-bold">职业教育 / 新媒体获客</span> <i></i>
+                </button>
+                <button class="w-full text-left px-4 py-3 rounded-xl border flex justify-between items-center sector-option" style="border-color: var(--border-color);" onclick="switchSector('本地生活电商')">
+                    <span class="font-bold">本地生活 / 电商变现</span> <i></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 原文/原视频 模拟弹窗 -->
+    <div id="modal-source" class="absolute inset-0 z-[60] flex flex-col opacity-0 pointer-events-none transition-opacity duration-300 transform translate-y-4" style="background-color: var(--bg-base);">
+        <div class="h-[60px] flex items-center px-4 border-b shrink-0" style="border-color: var(--border-color); background-color: var(--bg-card);">
+            <div class="w-10 h-10 flex items-center justify-center rounded-full bg-[var(--bg-panel)] cursor-pointer" onclick="closeSourceModal()">
+                <i class="ph ph-caret-down text-xl"></i>
+            </div>
+            <div class="ml-3 flex-1 truncate">
+                <span class="text-xs font-bold block opacity-60 tracking-wider">SOURCE VIEWER</span>
+                <span class="text-sm font-bold truncate block" id="source-title">Loading...</span>
+            </div>
+        </div>
+        <div class="flex-1 p-6 flex flex-col justify-center items-center text-center">
+            <div class="w-20 h-20 rounded-2xl mb-4 flex items-center justify-center bg-[var(--bg-panel)] shadow-lg">
+                <i class="ph-fill ph-rocket-launch text-4xl" style="color: var(--color-primary);"></i>
+            </div>
+            <h3 class="text-xl font-bold mb-3 tracking-wide">准备拉起原生平台</h3>
+            <p class="text-sm opacity-60 mb-8 max-w-[260px] leading-relaxed">此处用于展示原文或原视频内容。在实际产品中，我们将直接内嵌 WebView 解析网页，或唤起对应的流媒体 App。</p>
+            <button class="px-8 py-3 rounded-xl border font-bold tracking-widest active:scale-95 transition-transform" style="border-color: var(--color-primary); color: var(--color-primary); background: rgba(129,161,193,0.1);" onclick="closeSourceModal()">
+                返回情报流
+            </button>
+        </div>
+    </div>
+
+    <!-- 智库详情浮窗卡片 (Req: 智库悬浮卡片) -->
+    <div id="modal-library-detail" class="absolute inset-0 z-[55] flex flex-col justify-center items-center opacity-0 pointer-events-none transition-opacity duration-300 bg-black/80 backdrop-blur-sm">
+        <div class="w-full h-[82%] relative flex justify-center items-center mt-4">
+            <div id="library-detail-card" class="insight-card p-5 !left-4 !top-auto !h-full shadow-[0_20px_60px_rgba(0,0,0,0.9)]">
+                <!-- 卡片内容由 JS 动态注入 -->
+            </div>
+        </div>
+        <div class="mt-5 mb-2 text-[11px] text-white/50 tracking-widest font-bold flex items-center gap-2 cursor-pointer z-[60] py-2.5 px-5 rounded-full bg-white/5 hover:bg-white/10 transition-colors" onclick="closeLibraryDetail()">
+            <i class="ph ph-arrows-left-right text-lg"></i> 左右滑动或点击关闭
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ====== 数据与状态 ======
+    let savedItems = [];
+    
+    const mockCards = [
+        {
+            id: 1, type: 'warning', tag: '颠覆预警', heat: '匹配度 98%',
+            title: '某头部大模型API价格骤降80%，百万级上下文能力正式商用',
+            source: '开发者大会核心QA音频拆解',
+            sourceType: 'video', sourceTime: '45:12',
+            useCase: '复杂长文本合同审查、多轮法律咨询、企业知识库私有化部署。',
+            monetization: '转向纯API调用抽成（Pay-as-you-go），意图通过规模效应压死开源生态。',
+            roi: '单次复杂交互计算成本已降至 0.005 元。本地生活客服ROI彻底跑通，综合客诉处理成本直线下降60%。',
+            friction: '高并发状态API响应延迟存波动风险；医疗金融等重点行业隐私合规仍是采购最大痛点。',
+            action: '立即评估自有SaaS产品线定价，竞品大概率于下月发动价格战。建议提前锁定核心大客户年度合作框架。'
+        },
+        {
+            id: 2, type: 'opportunity', tag: '增长机遇', heat: '匹配度 92%',
+            title: 'AI IDE 独角兽披露最新数据：转化率达8%，商业架构初见雏形',
+            source: 'a16z 深度播客精华提炼',
+            sourceType: 'audio', sourceTime: '01:12:30',
+            useCase: '面向专业开发者的代码重构生成；极大降低非技术人员的自然语言编程门槛。',
+            monetization: '基础免费引流 + Pro版 $20/月（限制高级模型请求） + 企业私有定制版（贡献极高客单价）。',
+            roi: '免费到付费转化率达到惊人的 8%。老用户留存极高，核心开发者日均停留超4小时。团队研发产能整体跃升25%。',
+            friction: '护城河过度依赖外部底层闭源模型能力；微软阵营原生集成 Copilot 正加速防守反击。',
+            action: '组织产研团队研究其核心交互细节；建议本周内在中后台团队开展小规模替代验证。'
+        },
+        {
+            id: 3, type: 'normal', tag: '模式观察', heat: '匹配度 85%',
+            title: '多模态“套壳”应用大面积死亡，C端狂热迎来冷静期',
+            source: '硅谷风投内参深度结构化',
+            sourceType: 'article', sourceTime: '阅读时长 8min',
+            useCase: '依赖 Sora/Runway 概念的C端短视频一键生成工具、小红书批量图文起号神器。',
+            monetization: '通过高成本买量获客，诱导焦虑用户购买周卡月卡，本质是一次性流量收割生意。',
+            roi: '流量红利消退，获客成本(CAC)飙升至 $8，但单用户生命周期价值(LTV)暴跌至 $3 以下，ROI 全面倒挂崩盘。',
+            friction: '底层模型迭代过快，套壳应用红利期不足1个月，缺乏专有垂直数据集瞬间失去壁垒。',
+            action: '立即叫停内部立项的C端“文生视频”轻应用；将算力资源火速转移至B端具备深厚行业 Know-how 的场景。'
+        }
+    ];
+
+    // ====== 初始化与路由逻辑 ======
+    document.addEventListener("DOMContentLoaded", () => {
+        initApp();
+    });
+
+    function initApp() {
+        const hasOnboarded = localStorage.getItem('insightx_onboarded');
+        const savedSector = localStorage.getItem('insightx_sector');
+        
+        if (hasOnboarded === 'true' && savedSector) {
+            document.getElementById('current-sector-label').innerText = savedSector.split('/')[0];
+            showScreen('screen-splash');
+            
+            setTimeout(() => {
+                showScreen('screen-main');
+                initCards();
+            }, 2000);
+        } else {
+            showScreen('screen-onboarding');
+        }
+        
+        setupBottomNav();
+    }
+
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(el => {
+            el.classList.add('hidden-screen');
+        });
+        document.getElementById(screenId).classList.remove('hidden-screen');
+    }
+
+    function completeOnboarding(sector) {
+        localStorage.setItem('insightx_onboarded', 'true');
+        localStorage.setItem('insightx_sector', sector);
+        document.getElementById('current-sector-label').innerText = sector.split('/')[0];
+        
+        showScreen('screen-main');
+        initCards();
+    }
+
+    // ====== 赛道切换逻辑 ======
+    const modalSector = document.getElementById('modal-sector');
+    const modalSectorContent = document.getElementById('modal-sector-content');
+
+    function toggleSectorModal() {
+        if (modalSector.classList.contains('opacity-0')) {
+            modalSector.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => modalSectorContent.classList.remove('translate-y-full'), 10);
+        } else {
+            modalSectorContent.classList.add('translate-y-full');
+            setTimeout(() => modalSector.classList.add('opacity-0', 'pointer-events-none'), 300);
+        }
+    }
+
+    function switchSector(sector) {
+        localStorage.setItem('insightx_sector', sector);
+        document.getElementById('current-sector-label').innerText = sector.split('/')[0];
+        
+        document.querySelectorAll('.sector-option').forEach(btn => {
+            if (btn.innerText.includes(sector.split('/')[0])) {
+                btn.style.borderColor = 'var(--color-primary)';
+                btn.style.color = 'var(--color-primary)';
+                btn.style.background = 'var(--bg-panel)';
+                btn.querySelector('i').className = 'ph-fill ph-check-circle';
+            } else {
+                btn.style.borderColor = 'var(--border-color)';
+                btn.style.color = 'var(--text-main)';
+                btn.style.background = 'transparent';
+                btn.querySelector('i').className = '';
+            }
+        });
+        
+        toggleSectorModal();
+        document.getElementById('card-container').innerHTML = '';
+        setTimeout(initCards, 300);
+    }
+
+    // ====== 底部导航切换 ======
+    function setupBottomNav() {
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(nav => {
+                    nav.style.color = 'var(--text-muted)';
+                    nav.querySelector('i').classList.replace('ph-fill', 'ph');
+                });
+                
+                item.style.color = 'var(--color-primary)';
+                item.querySelector('i').classList.replace('ph', 'ph-fill');
+
+                if(item.dataset.target === 'view-library') {
+                    document.getElementById('library-dot').style.opacity = '0';
+                }
+
+                document.querySelectorAll('.view-content').forEach(view => {
+                    view.classList.remove('active');
+                });
+                document.getElementById(item.dataset.target).classList.add('active');
+            });
+        });
+    }
+
+    // ====== 卡片渲染与滑动逻辑 ======
+    function initCards() {
+        const container = document.getElementById('card-container');
+        container.innerHTML = '';
+        for (let i = mockCards.length - 1; i >= 0; i--) {
+            createCard(mockCards[i], i);
+        }
+    }
+
+    function createCard(data, index) {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'insight-card p-5';
+        cardEl.style.zIndex = mockCards.length - index;
+        
+        if (index > 0) {
+            cardEl.style.transform = `scale(${1 - index * 0.04}) translateY(${index * 12}px)`;
+            cardEl.style.opacity = 1 - index * 0.15;
+        }
+
+        let tagColor = data.type === 'warning' ? 'var(--color-warning)' : 
+                       (data.type === 'opportunity' ? 'var(--color-success)' : 'var(--color-highlight)');
+
+        let sourceIcon = 'ph-link';
+        let sourceText = '查看深度研报';
+        if(data.sourceType === 'video') { sourceIcon = 'ph-play-circle'; sourceText = '解析原视频重点'; }
+        if(data.sourceType === 'audio') { sourceIcon = 'ph-headphones'; sourceText = '收听播客精华片段'; }
+
+        cardEl.innerHTML = `
+            <div class="badge like">SAVED</div>
+            <div class="badge nope">DISCARD</div>
+
+            <div class="flex justify-between items-center mb-4 shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full shadow-[0_0_8px_currentColor]" style="background-color: ${tagColor}; color: ${tagColor};"></span>
+                    <span class="font-bold text-xs tracking-wider" style="color: ${tagColor}">${data.tag}</span>
+                </div>
+                <span class="text-xs font-bold opacity-60 tracking-wider">${data.heat}</span>
+            </div>
+            
+            <h2 class="text-xl font-bold mb-4 leading-snug shrink-0" style="color: var(--text-main);">${data.title}</h2>
+            
+            <!-- 可滚动区域 -->
+            <div class="flex-1 overflow-y-auto pr-2 scrollbar-hide flex flex-col gap-3 pb-2">
+                
+                <div class="p-3.5 rounded-xl border flex flex-col gap-1.5 shadow-sm" style="background: var(--bg-base); border-color: var(--border-color);">
+                    <span class="text-[10px] uppercase font-bold tracking-widest" style="color: var(--text-muted);">💰 商业模式与转化</span>
+                    <span class="text-[13px] leading-relaxed opacity-90">${data.monetization}</span>
+                    <span class="text-[13px] leading-relaxed font-bold mt-1" style="color: var(--color-success);">${data.roi}</span>
+                </div>
+
+                <div class="p-3.5 rounded-xl border flex flex-col gap-1.5 shadow-sm" style="background: var(--bg-base); border-color: var(--border-color);">
+                    <span class="text-[10px] uppercase font-bold tracking-widest" style="color: var(--text-muted);">🎯 落地场景与风险阻碍</span>
+                    <span class="text-[13px] leading-relaxed opacity-90">${data.useCase}</span>
+                    <span class="text-[13px] leading-relaxed mt-1" style="color: var(--color-warning);">${data.friction}</span>
+                </div>
+
+                <div class="p-3.5 rounded-xl border mt-2" style="border-color: rgba(129, 161, 193, 0.4); background-color: rgba(129, 161, 193, 0.08);">
+                    <span class="font-bold block mb-2 text-xs flex items-center gap-1.5 tracking-wider" style="color: var(--color-primary);">
+                        <i class="ph-fill ph-target"></i> 战略级行动建议
+                    </span>
+                    <p class="text-[13px] leading-relaxed opacity-90">${data.action}</p>
+                </div>
+            </div>
+
+            <!-- 极致醒目的原文跳转按钮 -->
+            <button class="w-full mt-4 shrink-0 font-bold py-3.5 rounded-xl flex justify-center items-center gap-2 transition-transform active:scale-95 shadow-[0_4px_15px_rgba(129,161,193,0.2)]" 
+                    style="background-color: var(--color-primary); color: var(--bg-base);"
+                    onclick="openSourceModal('${data.title}', event)">
+                <i class="ph-fill ${sourceIcon} text-xl"></i>
+                <span class="text-sm tracking-wide">${sourceText} <span class="text-[10px] opacity-70 ml-1 font-bold">(${data.sourceTime})</span></span>
+            </button>
+        `;
+
+        document.getElementById('card-container').appendChild(cardEl);
+        
+        if (index === 0) {
+            makeCardDraggable(cardEl, data);
+        }
+    }
+
+    function makeCardDraggable(card, data) {
+        let isDragging = false, startX = 0, startY = 0, currentX = 0, currentY = 0;
+        const badgeLike = card.querySelector('.badge.like');
+        const badgeNope = card.querySelector('.badge.nope');
+
+        const startDrag = (e) => {
+            if (e.target.closest('button')) return;
+            isDragging = true;
+            card.classList.add('dragging');
+            startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+            startY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+        };
+
+        const onDrag = (e) => {
+            if (!isDragging) return;
+            const x = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+            const y = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+            currentX = x - startX; currentY = y - startY;
+            
+            card.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${currentX * 0.04}deg)`;
+
+            if (currentX > 0) {
+                badgeLike.style.opacity = Math.min(currentX / 100, 1);
+                badgeNope.style.opacity = 0;
+            } else {
+                badgeNope.style.opacity = Math.min(Math.abs(currentX) / 100, 1);
+                badgeLike.style.opacity = 0;
+            }
+        };
+
+        const stopDrag = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            card.classList.remove('dragging');
+
+            if (currentX > 100) {
+                card.style.transform = `translate(${window.innerWidth}px, ${currentY}px) rotate(30deg)`;
+                card.style.opacity = 0;
+                saveToLibrary(data);
+                setTimeout(() => nextCard(card), 300);
+            } else if (currentX < -100) {
+                card.style.transform = `translate(-${window.innerWidth}px, ${currentY}px) rotate(-30deg)`;
+                card.style.opacity = 0;
+                setTimeout(() => nextCard(card), 300);
+            } else {
+                card.style.transform = `translate(0px, 0px) rotate(0deg)`;
+                badgeLike.style.opacity = 0; badgeNope.style.opacity = 0;
+            }
+        };
+
+        card.addEventListener('mousedown', startDrag);
+        card.addEventListener('touchstart', startDrag, {passive: true});
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('touchmove', onDrag, {passive: true});
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchend', stopDrag);
+    }
+
+    function nextCard(oldCard) {
+        oldCard.remove();
+        const cards = Array.from(document.getElementById('card-container').querySelectorAll('.insight-card'));
+        if (cards.length > 0) {
+            cards.forEach((card, idx) => {
+                const reverseIdx = cards.length - 1 - idx;
+                card.style.zIndex = idx;
+                card.style.transform = `scale(${1 - reverseIdx * 0.04}) translateY(${reverseIdx * 12}px)`;
+                card.style.opacity = 1 - reverseIdx * 0.15;
+            });
+            const topCardIndex = mockCards.length - cards.length;
+            makeCardDraggable(cards[cards.length - 1], mockCards[topCardIndex]);
+        } else {
+            document.getElementById('card-container').innerHTML = `
+                <div class="h-full flex flex-col justify-center items-center text-center">
+                    <i class="ph-fill ph-check-circle text-6xl mb-5 shadow-[0_0_30px_rgba(129,161,193,0.3)] rounded-full" style="color: var(--color-primary);"></i>
+                    <p class="font-bold text-lg tracking-widest">INBOX ZERO</p>
+                    <p class="text-sm mt-3 opacity-60">今日高价值情报已批阅完毕</p>
+                    <button class="mt-8 border px-8 py-3 rounded-xl text-sm font-bold active:scale-95 transition-transform" style="border-color: var(--color-primary); color: var(--color-primary); background: rgba(129,161,193,0.05);" onclick="initCards()">重置演示数据</button>
+                </div>
+            `;
+        }
+    }
+
+    // ====== Req 4: 矩阵视图 (Matrix) 交互逻辑 ======
+    function showMatrixDetail(title, desc, color) {
+        // 重置所有节点的高亮状态
+        document.querySelectorAll('.matrix-node').forEach(node => node.classList.remove('active'));
+        // 激活动前节点
+        event.currentTarget.classList.add('active');
+
+        const panel = document.getElementById('matrix-detail-panel');
+        panel.style.borderColor = color;
+        panel.style.boxShadow = `0 4px 20px ${color}15`;
+        panel.innerHTML = `
+            <div class="flex items-center gap-2.5 mb-2.5">
+                <span class="w-3 h-3 rounded-full shadow-[0_0_10px_currentColor]" style="background-color: ${color}; color: ${color};"></span>
+                <h3 class="font-bold text-base tracking-wide" style="color: var(--text-main);">${title}</h3>
+            </div>
+            <p class="text-[13px] leading-relaxed opacity-90" style="color: var(--text-main);">${desc}</p>
+        `;
+    }
+
+    // ====== Req 2: 深度智库 (Library) 交互逻辑 (支持置顶与删除) ======
+    function saveToLibrary(data) {
+        if(savedItems.find(item => item.id === data.id)) return;
+        
+        // 新增数据附带 pinned 属性
+        savedItems.unshift({...data, pinned: false});
+        updateLibraryUI();
+        document.getElementById('library-dot').style.opacity = '1';
+    }
+
+    function togglePin(id, e) {
+        e.stopPropagation();
+        const index = savedItems.findIndex(item => item.id === id);
+        if(index > -1) {
+            savedItems[index].pinned = !savedItems[index].pinned;
+            updateLibraryUI();
+        }
+    }
+
+    function deleteItem(id, e) {
+        e.stopPropagation();
+        savedItems = savedItems.filter(item => item.id !== id);
+        updateLibraryUI();
+    }
+
+    function updateLibraryUI() {
+        document.getElementById('saved-count').innerText = `${savedItems.length} 条归档`;
+        const list = document.getElementById('library-list');
+        const emptyState = document.getElementById('empty-library');
+        
+        // 【修复点】：只移除动态生成的卡片，绝对不能删掉空状态节点
+        Array.from(list.children).forEach(child => {
+            if (child.id !== 'empty-library') {
+                child.remove();
+            }
+        });
+        
+        if (savedItems.length === 0) {
+            emptyState.style.display = 'flex';
+            return;
+        }
+        
+        emptyState.style.display = 'none';
+
+        // 排序规则：置顶的在最上方
+        const sortedItems = [...savedItems].sort((a, b) => (b.pinned === true) - (a.pinned === true));
+
+        sortedItems.forEach(data => {
+            const itemEl = document.createElement('div');
+            // 如果置顶，边框颜色高亮
+            const borderColor = data.pinned ? 'var(--color-warning)' : 'var(--border-color)';
+            const bgColor = data.pinned ? 'rgba(208,135,112,0.05)' : 'var(--bg-card)';
+            
+            // 【新增】：添加 onclick 事件以呼出浮窗卡片
+            itemEl.className = 'p-4 rounded-xl border flex flex-col gap-2 cursor-pointer transition-colors relative';
+            itemEl.style.backgroundColor = bgColor;
+            itemEl.style.borderColor = borderColor;
+            itemEl.setAttribute('onclick', `openLibraryDetail(${data.id})`);
+            
+            itemEl.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div class="flex items-center gap-2">
+                        ${data.pinned ? `<i class="ph-fill ph-push-pin text-[14px]" style="color: var(--color-warning);"></i>` : ''}
+                        <span class="text-[10px] border px-2 py-0.5 rounded font-bold tracking-wider" style="color: var(--color-success); border-color: var(--color-success);">${data.tag}</span>
+                    </div>
+                    
+                    <!-- Req 2: 动作按钮栏 (置顶 & 删除) -->
+                    <div class="flex gap-4 text-lg opacity-80 pl-4">
+                        <i class="${data.pinned ? 'ph-fill' : 'ph'} ph-push-pin transition-colors active:scale-90" 
+                           style="color: ${data.pinned ? 'var(--color-warning)' : 'var(--text-muted)'};" 
+                           onclick="togglePin(${data.id}, event)"></i>
+                        <i class="ph ph-trash transition-colors active:scale-90 hover:text-red-400" 
+                           style="color: var(--text-muted);" 
+                           onclick="deleteItem(${data.id}, event)"></i>
+                    </div>
+                </div>
+                <h4 class="text-[14px] font-bold mt-1.5 leading-snug pr-2">${data.title}</h4>
+                <p class="text-[11px] opacity-60 mt-1 flex items-center gap-1.5 font-bold"><i class="ph ph-link text-sm"></i> ${data.source}</p>
+            `;
+            list.appendChild(itemEl);
+        });
+    }
+
+    // ====== 原文/原视频 Modal 逻辑 ======
+    function openSourceModal(title, e) {
+        if(e) e.stopPropagation(); 
+        document.getElementById('source-title').innerText = title;
+        const modal = document.getElementById('modal-source');
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        modal.classList.remove('translate-y-4');
+        modal.classList.add('translate-y-0');
+    }
+
+    function closeSourceModal() {
+        const modal = document.getElementById('modal-source');
+        modal.classList.add('translate-y-4');
+        modal.classList.remove('translate-y-0');
+        setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
+    }
+
+    // ====== 智库详情浮窗卡片逻辑 ======
+    function openLibraryDetail(id) {
+        const data = savedItems.find(item => item.id === id);
+        if(!data) return;
+
+        let tagColor = data.type === 'warning' ? 'var(--color-warning)' : 
+                       (data.type === 'opportunity' ? 'var(--color-success)' : 'var(--color-highlight)');
+
+        let sourceIcon = 'ph-link';
+        let sourceText = '查看深度研报';
+        if(data.sourceType === 'video') { sourceIcon = 'ph-play-circle'; sourceText = '解析原视频重点'; }
+        if(data.sourceType === 'audio') { sourceIcon = 'ph-headphones'; sourceText = '收听播客精华片段'; }
+
+        const cardEl = document.getElementById('library-detail-card');
+        
+        // 渲染与情报流完全一致的卡片内容，只是徽章改为了 CLOSE
+        cardEl.innerHTML = `
+            <div class="badge like" style="color: var(--text-muted); border-color: var(--text-muted); background: rgba(143,155,173,0.1);">CLOSE</div>
+            <div class="badge nope" style="color: var(--text-muted); border-color: var(--text-muted); background: rgba(143,155,173,0.1);">CLOSE</div>
+
+            <div class="flex justify-between items-center mb-4 shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full shadow-[0_0_8px_currentColor]" style="background-color: ${tagColor}; color: ${tagColor};"></span>
+                    <span class="font-bold text-xs tracking-wider" style="color: ${tagColor}">${data.tag}</span>
+                </div>
+                <span class="text-xs font-bold opacity-60 tracking-wider">${data.heat}</span>
+            </div>
+            
+            <h2 class="text-xl font-bold mb-4 leading-snug shrink-0" style="color: var(--text-main);">${data.title}</h2>
+            
+            <div class="flex-1 overflow-y-auto pr-2 scrollbar-hide flex flex-col gap-3 pb-2">
+                <div class="p-3.5 rounded-xl border flex flex-col gap-1.5 shadow-sm" style="background: var(--bg-base); border-color: var(--border-color);">
+                    <span class="text-[10px] uppercase font-bold tracking-widest" style="color: var(--text-muted);">💰 商业模式与转化</span>
+                    <span class="text-[13px] leading-relaxed opacity-90">${data.monetization}</span>
+                    <span class="text-[13px] leading-relaxed font-bold mt-1" style="color: var(--color-success);">${data.roi}</span>
+                </div>
+
+                <div class="p-3.5 rounded-xl border flex flex-col gap-1.5 shadow-sm" style="background: var(--bg-base); border-color: var(--border-color);">
+                    <span class="text-[10px] uppercase font-bold tracking-widest" style="color: var(--text-muted);">🎯 落地场景与风险阻碍</span>
+                    <span class="text-[13px] leading-relaxed opacity-90">${data.useCase}</span>
+                    <span class="text-[13px] leading-relaxed mt-1" style="color: var(--color-warning);">${data.friction}</span>
+                </div>
+
+                <div class="p-3.5 rounded-xl border mt-2" style="border-color: rgba(129, 161, 193, 0.4); background-color: rgba(129, 161, 193, 0.08);">
+                    <span class="font-bold block mb-2 text-xs flex items-center gap-1.5 tracking-wider" style="color: var(--color-primary);">
+                        <i class="ph-fill ph-target"></i> 战略级行动建议
+                    </span>
+                    <p class="text-[13px] leading-relaxed opacity-90">${data.action}</p>
+                </div>
+            </div>
+
+            <button class="w-full mt-4 shrink-0 font-bold py-3.5 rounded-xl flex justify-center items-center gap-2 transition-transform active:scale-95 shadow-[0_4px_15px_rgba(129,161,193,0.2)]" 
+                    style="background-color: var(--color-primary); color: var(--bg-base);"
+                    onclick="openSourceModal('${data.title}', event)">
+                <i class="ph-fill ${sourceIcon} text-xl"></i>
+                <span class="text-sm tracking-wide">${sourceText} <span class="text-[10px] opacity-70 ml-1 font-bold">(${data.sourceTime})</span></span>
+            </button>
+        `;
+
+        // 初始化卡片样式
+        cardEl.style.transform = 'translate(0px, 0px) rotate(0deg)';
+        cardEl.style.opacity = '1';
+
+        // 显示遮罩层
+        document.getElementById('modal-library-detail').classList.remove('opacity-0', 'pointer-events-none');
+
+        // 使用克隆节点重置事件监听器，避免多次绑定
+        const newCardEl = cardEl.cloneNode(true);
+        cardEl.parentNode.replaceChild(newCardEl, cardEl);
+
+        makeLibraryCardDraggable(newCardEl);
+    }
+
+    function closeLibraryDetail() {
+        const modal = document.getElementById('modal-library-detail');
+        modal.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    // 专为智库卡片定制的左右滑动关闭逻辑
+    function makeLibraryCardDraggable(card) {
+        let isDragging = false, startX = 0, startY = 0, currentX = 0, currentY = 0;
+        const badgeLike = card.querySelector('.badge.like');
+        const badgeNope = card.querySelector('.badge.nope');
+
+        const startDrag = (e) => {
+            if (e.target.closest('button')) return;
+            isDragging = true;
+            card.classList.add('dragging');
+            startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+            startY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+        };
+
+        const onDrag = (e) => {
+            if (!isDragging) return;
+            const x = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+            const y = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+            currentX = x - startX; currentY = y - startY;
+            
+            card.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${currentX * 0.04}deg)`;
+
+            // 无论是向左还是向右，都显示灰色的 CLOSE 徽章
+            if (currentX > 0) {
+                badgeLike.style.opacity = Math.min(currentX / 100, 1);
+                badgeNope.style.opacity = 0;
+            } else {
+                badgeNope.style.opacity = Math.min(Math.abs(currentX) / 100, 1);
+                badgeLike.style.opacity = 0;
+            }
+        };
+
+        const stopDrag = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            card.classList.remove('dragging');
+
+            if (Math.abs(currentX) > 100) {
+                // 触发滑出并关闭
+                const sign = currentX > 0 ? 1 : -1;
+                card.style.transform = `translate(${sign * window.innerWidth}px, ${currentY}px) rotate(${sign * 30}deg)`;
+                card.style.opacity = 0;
+                setTimeout(() => closeLibraryDetail(), 300);
+            } else {
+                // 滑动距离不够，弹回原位
+                card.style.transform = `translate(0px, 0px) rotate(0deg)`;
+                badgeLike.style.opacity = 0; badgeNope.style.opacity = 0;
+            }
+        };
+
+        card.addEventListener('mousedown', startDrag);
+        card.addEventListener('touchstart', startDrag, {passive: true});
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('touchmove', onDrag, {passive: true});
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchend', stopDrag);
+    }
+
+</script>
+</body>
+</html>

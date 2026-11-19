@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>InsightX 2.0 - AI 商业情报参谋 (Obsidian Pro)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Linear / Obsidian Precision Color Palette */
+            --bg-base: #07080B;
+            --bg-card: #0E1017;
+            --bg-panel: #151821;
+            --bg-panel-hover: #1C202C;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(255, 255, 255, 0.16);
+            --text-main: #F1F5F9;
+            --text-muted: #828B9E;
+            
+            --color-primary: #6366F1;       /* Electric Indigo */
+            --color-primary-glow: rgba(99, 102, 241, 0.22);
+            --color-success: #10B981;       /* Emerald */
+            --color-warning: #F59E0B;       /* Amber */
+            --color-danger: #F43F5E;        /* Rose */
+            --color-cyan: #06B6D4;          /* Cyber Cyan */
+            --color-purple: #A855F7;        /* Purple */
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #030406;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            touch-action: none;
+            color: var(--text-main);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .font-mono-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Hardware-like mobile frame */
+        #app-container {
+            width: 100%;
+            max-width: 430px;
+            height: 100%;
+            max-height: 932px;
+            background-color: var(--bg-base);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 80px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08);
+            border-radius: 36px;
+        }
+
+        @media (max-width: 480px) {
+            #app-container {
+                border-radius: 0;
+                max-height: 100dvh;
+            }
+        }
+
+        /* Screen Transitions */
+        .screen {
+            position: absolute;
+            inset: 0;
+            transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1), transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            background-color: var(--bg-base);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+        .screen.hidden-screen { opacity: 0; pointer-events: none; z-index: -1; transform: scale(0.97); }
+
+        /* View Content switching */
+        .view-content {
+            flex: 1;
+            overflow: hidden;
+            position: absolute;
+            inset: 0;
+            top: 72px;
+            bottom: 74px;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(10px) scale(0.985);
+            transition: opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1), transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .view-content.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Glassmorphism Navigation & Header */
+        .glass-header {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background: rgba(7, 8, 11, 0.78);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .glass-dock {
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            background: rgba(14, 16, 23, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        /* Card Stack & Drag Physics */
+        .card-stack { position: relative; width: 100%; height: 100%; perspective: 1000px; }
+        
+        .insight-card {
+            position: absolute;
+            width: calc(100% - 28px);
+            height: calc(100% - 14px);
+            left: 14px;
+            top: 6px;
+            background: linear-gradient(180deg, rgba(17, 19, 27, 0.98) 0%, rgba(12, 14, 20, 0.99) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px -10px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transform-origin: 50% 100%;
+            will-change: transform;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .insight-card.dragging { transition: none; }
+
+        /* Triage Stamps */
+        .stamp-badge {
+            position: absolute;
+            top: 36px;
+            padding: 6px 14px;
+            border: 2px solid;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            opacity: 0;
+            z-index: 25;
+            backdrop-filter: blur(8px);
+            pointer-events: none;
+            transition: opacity 0.15s ease;
+        }
+        .stamp-badge.like {
+            left: 20px;
+            color: var(--color-success);
+            border-color: var(--color-success);
+            background: rgba(16, 185, 129, 0.12);
+            transform: rotate(-14deg);
+        }
+        .stamp-badge.nope {
+            right: 20px;
+            color: var(--text-muted);
+            border-color: var(--text-muted);
+            background: rgba(130, 139, 158, 0.12);
+            transform: rotate(14deg);
+        }
+
+        /* Bento Grid Components */
+        .bento-spec-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .bento-spec-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .bento-spec-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Interactive ROI Slider Component */
+        .roi-interactive-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.06) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 14px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+        .roi-range-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.12);
+            outline: none;
+            margin: 8px 0;
+        }
+        .roi-range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--color-primary);
+            box-shadow: 0 0 10px var(--color-primary);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .roi-range-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        /* Audio Snippet Player Component */
+        .audio-snippet-box {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.07) 0%, rgba(168, 85, 247, 0.07) 100%);
+            border: 1px solid rgba(6, 182, 212, 0.22);
+            border-radius: 14px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+        .soundwave-bars {
+            display: flex;
+            align-items: center;
+            gap: 2.5px;
+            height: 18px;
+        }
+        .soundwave-bar {
+            width: 3px;
+            background: var(--color-cyan);
+            border-radius: 2px;
+            height: 4px;
+            transition: height 0.15s ease;
+        }
+        .soundwave-bar.playing {
+            animation: waveBounce 0.8s ease-in-out infinite alternate;
+        }
+        .soundwave-bar:nth-child(1) { animation-delay: 0.1s; }
+        .soundwave-bar:nth-child(2) { animation-delay: 0.3s; }
+        .soundwave-bar:nth-child(3) { animation-delay: 0.5s; }
+        .soundwave-bar:nth-child(4) { animation-delay: 0.2s; }
+        .soundwave-bar:nth-child(5) { animation-delay: 0.4s; }
+        .soundwave-bar:nth-child(6) { animation-delay: 0.6s; }
+        @keyframes waveBounce {
+            0% { height: 4px; }
+            100% { height: 18px; }
+        }
+
+        /* Matrix 2D Coordinate Grid */
+        .matrix-grid-bg {
+            background-size: 24px 24px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+        .matrix-node-core {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--node-color);
+            box-shadow: 0 0 10px var(--node-color);
+            transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .matrix-node:hover .matrix-node-core, .matrix-node.active .matrix-node-core {
+            transform: scale(1.7);
+        }
+
+        /* Linear Style Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Shimmer Loading */
+        .shimmer-panel {
+            background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.6s infinite;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Pulses and glows */
+        .status-dot-glow {
+            box-shadow: 0 0 8px currentColor;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+
+    <!-- 1. SPLASH SCREEN -->
+    <div id="screen-splash" class="screen hidden-screen justify-center items-center z-50">
+        <div class="relative flex items-center justify-center">
+            <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center">
+                <i class="ph-fill ph-radar text-3xl text-indigo-400 animate-pulse"></i>
+            </div>
+            <div class="absolute -inset-2 rounded-3xl bg-indigo-500/10 blur-xl -z-10"></div>
+        </div>
+        <h1 class="text-xl font-bold tracking-tight mt-6" style="letter-spacing: -0.03em;">InsightX <span class="text-indigo-400">2.0</span></h1>
+        <p class="text-[10px] tracking-[0.25em] uppercase font-mono-code mt-2 text-slate-400" id="splash-text">INITIALIZING OBSIDIAN ENGINE...</p>
+    </div>
+
+    <!-- 2. ONBOARDING SCREEN -->
+    <div id="screen-onboarding" class="screen hidden-screen justify-center px-6 z-50">
+        <div class="mb-8">
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide mb-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                <i class="ph-fill ph-sparkle text-xs"></i> 商业决策参谋
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight mb-2" style="letter-spacing: -0.03em;">请选择您的核心决策赛道</h1>
+            <p class="text-xs text-slate-400 leading-relaxed">系统将为您聚合高信噪比的情报卡片，支持左滑忽略、右滑收藏</p>
+        </div>
+
+        <div class="flex flex-col gap-3">
+            <button class="w-full text-left p-4 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-indigo-500/40 transition-all flex items-center justify-between group"
+                    onclick="completeOnboarding('🔥 新模型速递')">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
+                        <i class="ph-fill ph-fire text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">🔥 新模型发布与技术速递</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">模型参数、架构突破、开源商用与Arena跑分</div>
+                    </div>
+                </div>
+                <i class="ph ph-arrow-right text-slate-500 group-hover:text-white group-hover:translate-x-0.5 transition-all"></i>
+            </button>
+
+            <button class="w-full text-left p-4 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-indigo-500/40 transition-all flex items-center justify-between group"
+                    onclick="completeOnboarding('💰 Token 经济学')">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <i class="ph-fill ph-currency-dollar text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">💰 Token 经济学与定价雷达</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">API降价监控、计费模式突变、ROI动态推演</div>
+                    </div>
+                </div>
+                <i class="ph ph-arrow-right text-slate-500 group-hover:text-white group-hover:translate-x-0.5 transition-all"></i>
+            </button>
+
+            <button class="w-full text-left p-4 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-indigo-500/40 transition-all flex items-center justify-between group"
+                    onclick="completeOnboarding('🎙️ 播客与财报原声')">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                        <i class="ph-fill ph-microphone text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">🎙️ 播客与财报长音频决策内参</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">硬核访谈高潮提炼、高管发言30s原声试听</div>
+                    </div>
+                </div>
+                <i class="ph ph-arrow-right text-slate-500 group-hover:text-white group-hover:translate-x-0.5 transition-all"></i>
+            </button>
+
+            <button class="w-full text-left p-4 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-indigo-500/40 transition-all flex items-center justify-between group"
+                    onclick="completeOnboarding('🌐 SaaS 商业化综合')">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="ph-fill ph-chart-polar text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">🌐 SaaS 商业化与出海综合</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">全网优质商业情报聚合、商业模式深度拆解</div>
+                    </div>
+                </div>
+                <i class="ph ph-arrow-right text-slate-500 group-hover:text-white group-hover:translate-x-0.5 transition-all"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. MAIN DASHBOARD SCREEN -->
+    <div id="screen-main" class="screen hidden-screen">
+        
+        <!-- TOP FLOATING GLASS HEADER -->
+        <header class="h-[72px] px-4 flex items-center justify-between glass-header z-30 shrink-0">
+            <!-- Brand & Sector Switcher -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <i class="ph-fill ph-lightning text-sm"></i>
+                </div>
+                <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] cursor-pointer transition-colors"
+                     onclick="toggleSectorModal()">
+                    <span class="text-xs font-bold tracking-tight text-white" id="current-sector-label">🔥 新模型速递</span>
+                    <i class="ph-fill ph-caret-down text-[10px] text-slate-400"></i>
+                </div>
+            </div>
+
+            <!-- Controls (Status + Refresh + Settings) -->
+            <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/[0.03] border border-white/5 opacity-0 transition-opacity" id="ai-status-bar">
+                    <div class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></div>
+                    <span class="font-mono-code text-[9px] tracking-wider text-slate-400 uppercase" id="ai-status-text">ANALYZING</span>
+                </div>
+                <button class="w-8 h-8 rounded-full flex items-center justify-center border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-colors"
+                        onclick="refreshCards()">
+                    <i class="ph ph-arrows-clockwise text-sm text-slate-400 hover:text-white" id="refresh-icon"></i>
+                </button>
+                <button class="w-8 h-8 rounded-full flex items-center justify-center border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] transition-colors"
+                        onclick="openSettingsModal()">
+                    <i class="ph ph-sliders text-sm text-slate-400 hover:text-white" id="settings-icon"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- VIEW 1: FEED VIEW (Triage Card Stack) -->
+        <main id="view-feed" class="view-content active">
+            <div class="card-stack" id="card-container"></div>
+            
+            <!-- Bottom Swipe Guidance Hints -->
+            <div class="absolute bottom-2 left-0 right-0 flex justify-between px-6 pointer-events-none opacity-40 text-[10px] font-mono-code tracking-wider text-slate-400">
+                <span>← 左滑 忽略</span>
+                <span>右滑 收藏归档 →</span>
+            </div>
+        </main>
+
+        <!-- VIEW 2: MATRIX VIEW (2D Strategic Radar) -->
+        <main id="view-matrix" class="view-content px-4 py-3 overflow-y-auto">
+            <div class="flex justify-between items-center mb-3">
+                <div>
+                    <h2 class="text-sm font-bold tracking-tight">战略态势矩阵 (Matrix Radar)</h2>
+                    <p class="text-[10px] text-slate-400">横轴：技术/合规落地阻碍 ➔ 纵轴：商业价值与ROI</p>
+                </div>
+                <span class="text-[10px] font-mono-code px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20" id="matrix-count">0 节点</span>
+            </div>
+
+            <!-- 2D Canvas Area -->
+            <div id="matrix-nodes-area" class="relative rounded-2xl border border-white/10 bg-[#0A0C12] matrix-grid-bg overflow-hidden shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)] h-[310px] shrink-0 mb-3">
+                <div class="absolute top-2 left-2 text-[9px] font-mono-code text-indigo-400/60 uppercase">High Value / Low Friction</div>
+                <div class="absolute bottom-2 right-2 text-[9px] font-mono-code text-slate-500/60 uppercase">High Friction / Low Impact</div>
+                <div id="matrix-loading" class="hidden absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-20">
+                    <i class="ph ph-spinner animate-spin text-2xl text-indigo-400"></i>
+                </div>
+            </div>
+
+            <!-- Node Detail Drawer -->
+            <div id="matrix-detail-panel" class="p-3.5 rounded-2xl border border-white/10 bg-white/[0.03] min-h-[90px] transition-all">
+                <div class="flex items-center gap-2 mb-1.5">
+                    <span class="w-2 h-2 rounded-full bg-slate-500" id="matrix-detail-dot"></span>
+                    <span class="text-xs font-bold truncate text-white" id="matrix-detail-title">点击上方雷达节点透视情报</span>
+                </div>
+                <p class="text-[11px] text-slate-400 leading-relaxed" id="matrix-detail-desc">在二维散点图上点击任意情报节点，即可在此快速预览核心价值、落地场景与战略判断。</p>
+            </div>
+        </main>
+
+        <!-- VIEW 3: LIBRARY VIEW (Bookmarked Intelligence) -->
+        <main id="view-library" class="view-content px-4 py-3 overflow-y-auto">
+            <div class="flex justify-between items-center mb-3">
+                <div>
+                    <h2 class="text-sm font-bold tracking-tight">归档情报智库 (Vault)</h2>
+                    <p class="text-[10px] text-slate-400">右滑收藏的高价值商业决策情报</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-mono-code px-2 py-0.5 rounded bg-white/[0.04] text-slate-300 border border-white/10" id="saved-count">0 篇</span>
+                    <button class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-colors flex items-center gap-1"
+                            onclick="exportLibraryMarkdown()">
+                        <i class="ph ph-export"></i> 导出 MD
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter chips -->
+            <div class="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide">
+                <button class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/10 text-white border border-white/15 lib-filter-btn" onclick="filterLibrary('all', this)">全部</button>
+                <button class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/[0.03] text-slate-400 border border-white/5 hover:text-white lib-filter-btn" onclick="filterLibrary('warning', this)">颠覆预警</button>
+                <button class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/[0.03] text-slate-400 border border-white/5 hover:text-white lib-filter-btn" onclick="filterLibrary('opportunity', this)">增长机遇</button>
+                <button class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/[0.03] text-slate-400 border border-white/5 hover:text-white lib-filter-btn" onclick="filterLibrary('normal', this)">模式观察</button>
+            </div>
+
+            <!-- Saved List -->
+            <div class="flex flex-col gap-2.5 pb-6" id="library-list"></div>
+            
+            <!-- Empty state -->
+            <div id="empty-library" class="h-64 flex flex-col justify-center items-center text-center opacity-40">
+                <i class="ph ph-archive text-4xl mb-2 text-slate-500"></i>
+                <div class="text-xs font-bold">暂无归档情报</div>
+                <div class="text-[10px] text-slate-500 mt-1">在情报流中向右滑动卡片，即可收藏至此</div>
+            </div>
+        </main>
+
+        <!-- BOTTOM FLOATING DOCK -->
+        <nav class="absolute bottom-3 left-4 right-4 h-14 rounded-2xl glass-dock flex items-center justify-around px-2 z-30">
+            <button class="nav-item flex-1 flex flex-col items-center justify-center gap-1 text-indigo-400 transition-colors"
+                    data-target="view-feed" onclick="switchView('view-feed', this)">
+                <i class="ph-fill ph-cards text-lg"></i>
+                <span class="text-[9px] font-bold tracking-tight">情报流</span>
+            </button>
+            <button class="nav-item flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 transition-colors"
+                    data-target="view-matrix" onclick="switchView('view-matrix', this)">
+                <i class="ph ph-chart-scatter text-lg"></i>
+                <span class="text-[9px] font-bold tracking-tight">态势矩阵</span>
+            </button>
+            <button class="nav-item flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-slate-200 transition-colors relative"
+                    data-target="view-library" onclick="switchView('view-library', this)">
+                <i class="ph ph-bookmark-simple text-lg"></i>
+                <span class="text-[9px] font-bold tracking-tight">智库</span>
+                <div id="library-dot" class="absolute top-2 right-[32%] w-1.5 h-1.5 rounded-full bg-amber-400 opacity-0 transition-opacity"></div>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- 4. MODALS & DRAWERS -->
+
+    <!-- Sector Switcher Modal -->
+    <div id="modal-sector" class="absolute inset-0 bg-black/75 backdrop-blur-md z-50 flex flex-col justify-end opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-[#0F1118] border-t border-white/10 rounded-t-3xl p-6 transform translate-y-full transition-transform duration-300" id="modal-sector-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold tracking-tight text-white">切换商业情报赛道</h3>
+                <i class="ph ph-x text-lg text-slate-400 hover:text-white cursor-pointer" onclick="toggleSectorModal()"></i>
+            </div>
+            <div class="flex flex-col gap-2">
+                <button class="w-full text-left px-4 py-3 rounded-xl border flex justify-between items-center sector-opt transition-all border-indigo-500/40 bg-indigo-500/10 text-indigo-300"
+                        onclick="switchSector('🔥 新模型速递')">
+                    <span class="text-xs font-bold">🔥 新模型发布与技术速递</span>
+                    <i class="ph-fill ph-check-circle text-indigo-400"></i>
+                </button>
+                <button class="w-full text-left px-4 py-3 rounded-xl border flex justify-between items-center sector-opt transition-all border-white/5 bg-white/[0.02] text-slate-300 hover:border-white/20"
+                        onclick="switchSector('💰 Token 经济学')">
+                    <span class="text-xs font-bold">💰 Token 经济学与定价雷达</span>
+                    <i></i>
+                </button>
+                <button class="w-full text-left px-4 py-3 rounded-xl border flex justify-between items-center sector-opt transition-all border-white/5 bg-white/[0.02] text-slate-300 hover:border-white/20"
+                        onclick="switchSector('🎙️ 播客与财报原声')">
+                    <span class="text-xs font-bold">🎙️ 播客与财报长音频决策内参</span>
+                    <i></i>
+                </button>
+                <button class="w-full text-left px-4 py-3 rounded-xl border flex justify-between items-center sector-opt transition-all border-white/5 bg-white/[0.02] text-slate-300 hover:border-white/20"
+                        onclick="switchSector('🌐 SaaS 商业化综合')">
+                    <span class="text-xs font-bold">🌐 SaaS 商业化与出海综合</span>
+                    <i></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="modal-settings" class="absolute inset-0 bg-black/75 backdrop-blur-md z-50 flex flex-col justify-end opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-[#0F1118] border-t border-white/10 rounded-t-3xl p-6 transform translate-y-full transition-transform duration-300" id="modal-settings-content">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="text-sm font-bold tracking-tight text-white">模型与 API 配置</h3>
+                    <p class="text-[10px] text-slate-400 mt-0.5">密钥仅保存在本地浏览器中，绝不上传任何服务器</p>
+                </div>
+                <i class="ph ph-x text-lg text-slate-400 hover:text-white cursor-pointer" onclick="closeSettingsModal()"></i>
+            </div>
+
+            <div class="flex flex-col gap-3.5 mb-5">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                        <span>通义千问 (DashScope) API Key</span>
+                        <a href="https://bailian.console.aliyun.com/" target="_blank" class="text-indigo-400 text-[10px] hover:underline">获取密钥 ↗</a>
+                    </label>
+                    <input type="password" id="input-qwen" placeholder="sk-..." 
+                           class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 font-mono-code text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                        <span>YouTube Data API v3 Key (选填)</span>
+                        <a href="https://console.cloud.google.com/" target="_blank" class="text-indigo-400 text-[10px] hover:underline">申请 ↗</a>
+                    </label>
+                    <input type="password" id="input-youtube" placeholder="AIzaSy..." 
+                           class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 font-mono-code text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50">
+                </div>
+            </div>
+
+            <div class="flex gap-2.5">
+                <button class="flex-1 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-slate-300 hover:bg-white/5 transition-colors"
+                        onclick="clearApiKeys()">清空密钥</button>
+                <button class="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white text-xs font-bold hover:bg-indigo-600 transition-colors shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+                        onclick="saveApiKeys()">保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Source Reader Modal -->
+    <div id="modal-source" class="absolute inset-0 z-50 flex flex-col bg-[#07080B] opacity-0 pointer-events-none transition-all duration-300 translate-y-4">
+        <header class="h-14 px-4 border-b border-white/10 flex items-center justify-between glass-header shrink-0">
+            <span class="text-xs font-bold truncate max-w-[280px]" id="source-title">原文阅读器</span>
+            <i class="ph ph-x text-lg text-slate-400 hover:text-white cursor-pointer" onclick="closeSourceModal()"></i>
+        </header>
+        <div class="flex-1 p-5 overflow-y-auto" id="source-content-area"></div>
+    </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  INSIGHTX 2.0 - OBSIDIAN ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+const CONFIG = {
+    get qwenKey()    { return localStorage.getItem('insightx_qwen_key') || ''; },
+    get youtubeKey() { return localStorage.getItem('insightx_youtube_key') || ''; }
+};
+
+const API_ENDPOINTS = {
+    hn_top:   'https://hacker-news.firebaseio.com/v0/topstories.json',
+    hn_item:  'https://hacker-news.firebaseio.com/v0/item',
+    devto:    'https://dev.to/api/articles',
+    qwen:     'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    rss2json: 'https://api.rss2json.com/v1/api.json'
+};
+
+// ── State ──────────────────────────────────────────────────────
+let savedItems       = [];
+let currentCards     = [];
+let isGenerating     = false;
+let currentSector    = '🔥 新模型速递';
+let activeAudioPill  = null;
+let audioTimer       = null;
+
+// ── Fallback Dataset (Curated Rich Spec & Intelligence) ──────────
+const CURATED_INTELLIGENCE = {
+    '🔥 新模型速递': [
+        {
+            id: 201,
+            type: 'opportunity',
+            tag: '重磅发布',
+            heat: '匹配度 99%',
+            title: 'DeepSeek-V3 正式发布：671B 满血 MoE 架构，性能全面比肩闭源顶尖模型',
+            originalTitle: 'DeepSeek-V3 Paper & Model Weights Released under MIT License',
+            source: '官方技术白皮书 · DeepSeek',
+            sourceType: 'article',
+            sourcePlatform: 'chinese',
+            sourceTime: '阅读 6min',
+            modelSpecs: {
+                arch: '671B MoE (激活 37B)',
+                context: '128K 窗口 · MLA 架构',
+                license: 'MIT 开源 (可直接商用)',
+                benchmark: 'MMLU 88.5 · Arena #3'
+            },
+            summary: 'DeepSeek-V3 采用多头潜在注意力 (MLA) 与 DeepSeekMoE 架构，仅需 2.788M H800 GPU 小时即完成全量训练。各项基准跑分超越 Llama 3.1 405B，在代码生成与数学推理维度表现尤其惊艳。',
+            monetization: '开源权重完全免费，官方 API 每百万输入 Token 仅需 ¥1.00，输出 ¥2.00。',
+            roi: '相比 GPT-4o 降本 85% 以上，原本因算力过贵而无法商业化的代码生成与长文本 Agent 业务全面跑通。',
+            useCase: '企业私有化代码 Copilot、复杂业务多 Agent 工作流调度、长文本合规质检。',
+            friction: '满血版 671B 权重本地私有化部署需要 8 张 H800/A100 显存，中小团队多采用量化版或官方 API。',
+            action: '产研团队本周应立即进行基准替换测试，重点核算 Coding 场景下替代闭源模型的降本幅度。'
+        },
+        {
+            id: 202,
+            type: 'opportunity',
+            tag: '架构突破',
+            heat: '匹配度 95%',
+            title: 'Claude 3.5 Sonnet 新版上线：Computer Use 开启计算机视觉操作新范式',
+            originalTitle: 'Anthropic Launches Upgraded Claude 3.5 Sonnet with Computer Use Capability',
+            source: 'Anthropic Engineering Blog',
+            sourceType: 'article',
+            sourcePlatform: 'devto',
+            sourceTime: '阅读 8min',
+            modelSpecs: {
+                arch: '多模态混合自回归',
+                context: '200K 上下文窗口',
+                license: '商业闭源 API',
+                benchmark: 'SWE-bench 49.0% (SOTA)'
+            },
+            summary: 'Anthropic 推出具备直接控制屏幕光标、点击输入功能的 Computer Use API，使模型不仅能回答问题，更能像人类一样在操作系统界面完成跨应用复杂任务。',
+            monetization: '输入 $3.00/M，输出 $15.00/M，支持 Prompt Caching 降低缓存输入成本 90%。',
+            roi: '端到端复杂自动化流程人工替代率达 60%，在 RPA 与金融表单录入场景释放数百小时人力。',
+            useCase: '自动化跨平台数据搬运、无 API 老旧系统的自动化录入与测试用例执行。',
+            friction: '屏幕识别延迟与误操作风险仍需人类高管在关键环节进行 Human-in-the-loop 审核。',
+            action: '在公司内测搭建自动化质检流程原型，关注 Prompt Caching 策略降低长期调取开销。'
+        },
+        {
+            id: 203,
+            type: 'warning',
+            tag: '端侧颠覆',
+            heat: '匹配度 91%',
+            title: 'Llama 3.3 70B 逆袭发布：以 70B 体积逼近 405B 旗舰算力体验',
+            originalTitle: 'Meta Introduces Llama 3.3 70B with 128k Context and High Efficiency',
+            source: 'Meta AI Research',
+            sourceType: 'article',
+            sourcePlatform: 'hn',
+            sourceTime: '阅读 5min',
+            modelSpecs: {
+                arch: '70B 密集 Dense 模型',
+                context: '128K 上下文',
+                license: 'Llama 3.3 Community',
+                benchmark: 'MMLU 86.9 · GSM8K 90%'
+            },
+            summary: 'Meta 通过知识蒸馏技术，使 70B 参数的 Llama 3.3 实现了接近前代 405B 的评测表现，单张消费级 GPU 或双卡工作站即可完成推理，大幅压低了中小企业的端侧算力门槛。',
+            monetization: '权重完全公开，云服务商托管推理成本低至 $0.15/M Token。',
+            roi: '私有化推理服务器采购预算直接砍半，初创团队可在自有服务器上安全处理敏感商业数据。',
+            useCase: '医疗法律等隐私敏感行业私有化知识库、边缘端智能硬件与本地离线客服。',
+            friction: '上下文达到 64K 以上时长距离推理注意力衰减仍需微调补偿。',
+            action: '对数据出境敏感的客户立即推荐此方案作为本地私有化首选替代。'
+        }
+    ],
+
+    '💰 Token 经济学': [
+        {
+            id: 204,
+            type: 'warning',
+            tag: '价格暴降',
+            heat: '匹配度 98%',
+            title: '主流推理模型迎历史性降价：百万 Token 单价击穿 1 元大关，价格战全面打响',
+            originalTitle: 'LLM Inference Cost Collapses: Price War Reshapes SaaS Margins',
+            source: '硅谷算力与商业内参',
+            sourceType: 'article',
+            sourcePlatform: 'rss',
+            sourceTime: '深度调研 10min',
+            tokenPricing: {
+                unitPrice: '¥0.0015 / 次交互',
+                dropPercent: '82%',
+                prevPrice: '¥0.0085'
+            },
+            summary: '随着 Flash/Lite 系列模型与开源 MoE 的普及，主流服务商 API 价格在过去半年内累计下调超 80%。对于按 Token 消耗付费的 B 端 SaaS 而言，底层推理成本已从不可承受之重转变为毛利红利。',
+            monetization: 'SaaS 商业模式正在从原本激进的纯 Token 加价抽成，重构为按席位费 + 增值结果付费。',
+            roi: '以单日 50 万次调用的客服 Agent 为例，每月推理服务器支出从 ¥127,500 直降至 ¥22,500。',
+            useCase: '全量客服自动化、自动化每日新闻研报生成、高频次代码静态分析。',
+            friction: '低价往往伴随极端并发下的速率限制 (Rate Limit)，核心业务需自备多模型容灾降级路由。',
+            action: '立即评估自有产品调价空间，在竞品下发降价通告前抢先推出普惠版占领市场份额。'
+        },
+        {
+            id: 205,
+            type: 'opportunity',
+            tag: '商业重构',
+            heat: '匹配度 93%',
+            title: 'AI 编程助手披露最新留存模型：放弃纯加价模式，转向混合阶梯订阅制',
+            originalTitle: 'AI IDE Unicorn Shifts Monetization: How Hybrid Token Metering Saved Margins',
+            source: 'SaaS 商业化年报',
+            sourceType: 'article',
+            sourcePlatform: 'newsletter',
+            sourceTime: '阅读 7min',
+            tokenPricing: {
+                unitPrice: '$20 / 月基准席位',
+                dropPercent: '毛利升至 68%',
+                prevPrice: '毛利 32%'
+            },
+            summary: '纯按 Token 消耗买单会导致重度用户吃光利润，而轻度用户觉得吃亏。头部工具成功推行“每月基础配额 + 溢出弹性计量”的混合模式，使毛利率由 32% 大幅修复至 68%。',
+            monetization: '基础版 $20/月（含 500 次高级调用）+ 溢出按成本价 + 10% 算力包扣费。',
+            roi: '单用户 LTV 提升 40%，有效过滤了无休止写死循环脚本的算力寄生用户。',
+            useCase: '开发者工具、设计生成软件、企业级文案协同平台。',
+            friction: '需要自研精准的 Token 实时扣费网关与账单透明展示面板，研发周期约 2-3 周。',
+            action: '建议商业化团队参考该混合定价模型，优化本季度上线的新增值功能付费门槛。'
+        }
+    ],
+
+    '🎙️ 播客与财报原声': [
+        {
+            id: 206,
+            type: 'opportunity',
+            tag: '高管访谈',
+            heat: '匹配度 97%',
+            title: '海外独角兽 CEO 谈真实 ROI：单客户部署成本从 2.4 美分压缩至 0.18 美分实录',
+            originalTitle: 'Latent Space Podcast #84: Building Lean LLM Architectures in Production',
+            source: 'Latent Space Podcast · 原声拆解',
+            sourceType: 'audio',
+            sourcePlatform: 'youtube',
+            sourceTime: '42:15 - 42:45',
+            audioSnippet: {
+                quote: '“我们在第 3 季度果断抛弃了纯大模型全链条调用，改用轻量分类器前置分流。最终单次查询的端到端服务器推理成本从 2.4 美分直接砸到了 0.18 美分，毛利率因此修复了整整 24 个百分点。”',
+                speaker: 'CEO & 联合创始人 / 播客现场原声',
+                timestamp: '42:15',
+                duration: '30s'
+            },
+            summary: '在访谈中，创始人深入拆解了如何通过小模型做前置 Intent 分流、将 80% 的简单查询拦截在小参数模型层，仅将 20% 真正复杂的长链任务抛给昂贵的顶尖模型，从而实现工程级降本。',
+            monetization: '通过极致成本控制，将企业版客单价下调 30%，反向实现客户转化率翻倍。',
+            roi: '服务器总算力开销断崖式下降 75%，企业在不牺牲回答质量的前提下提前两季度实现正现金流。',
+            useCase: '企业智能客服级联架构、智能销售外呼与合同知识库问答。',
+            friction: '小参数分类器的误判会导致部分复杂问题未被正确路由，需要定期做意图标注对齐。',
+            action: '组织工程架构师开展分流验证测试，严禁所有业务请求无脑直接打昂贵旗舰 API。'
+        },
+        {
+            id: 207,
+            type: 'warning',
+            tag: '闭门内幕',
+            heat: '匹配度 92%',
+            title: '顶级投资人闭门会实录：盲目上马私有化微调，80% 企业正面临算力与维护泥潭',
+            originalTitle: 'Closed-door VC Roundtable: Why Enterprise Fine-tuning Often Destroys ROI',
+            source: '42章经 / 投资人闭门交流会',
+            sourceType: 'audio',
+            sourcePlatform: 'chinese',
+            sourceTime: '18:40 - 19:10',
+            audioSnippet: {
+                quote: '“很多传统企业花了几百万买算力集群做行业微调，结果半年后开源基座模型一迭代，其零样本能力直接秒杀了企业辛辛苦苦微调半年的结果，ROI 完全归零。”',
+                speaker: '一级市场合伙人 / 闭门分享',
+                timestamp: '18:40',
+                duration: '30s'
+            },
+            summary: '多位资深投资人指出，非核心专有数据场景下盲目微调基座是巨大资源浪费。高性价比的架构是“强基座模型 + 高精度 RAG 知识检索 + 动态上下文工程”，而不是重复造轮子去训模型。',
+            monetization: '帮助传统企业从微调泥潭抽身，转向轻量 RAG 知识库搭建的系统集成商大赚。',
+            roi: '采用 RAG 相比全量微调，初期立项预算从数百万降低至 15 万元以内，周期从 6 个月缩短至 2 周。',
+            useCase: '企业私有知识库升级、政府与国企内部智能办公助手。',
+            friction: '需要解决非结构化文档的精准切块 (Chunking) 与表格解析准确率问题。',
+            action: '若客户提出高额微调预算，主动推演 RAG 替代方案，用低成本高见效赢得客户信任。'
+        }
+    ],
+
+    '🌐 SaaS 商业化综合': [
+        {
+            id: 208,
+            type: 'normal',
+            tag: '模式观察',
+            heat: '匹配度 89%',
+            title: '多模态 AI 应用出海半年报：海外买量成本飙升，留存率成为生死线',
+            originalTitle: 'AI Overseas Consumer Apps 2025: LTV vs CAC Dynamics',
+            source: '白鲸出海深度洞察',
+            sourceType: 'article',
+            sourcePlatform: 'chinese',
+            sourceTime: '阅读 8min',
+            summary: '出海工具类 AI 应用正告别“换脸剪视频即可暴富”的蛮荒时代。Meta 与 Google 广告渠道买量成本上涨 50%，若次月留存不能维持在 25% 以上，投放即亏损。',
+            monetization: '周卡套路逐渐被 App Store 严厉监管，必须依靠订阅制与核心社区粘性提供长期价值。',
+            roi: '优质产品单客获客成本从 $6 优化至 $3.2，次月留存提升至 34%，依靠自然推荐降低投放依赖。',
+            useCase: '跨境电商素材生成、海外网关客服、个人品牌社媒自动化助理。',
+            friction: '跨国支付欺诈与退款率高企，合规要求极其严苛。',
+            action: '将产品重心从前端买量套壳转移至深耕特定垂直行业的全自动工作流。'
+        }
+    ]
+};
+
+// ── Boot ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    setupBottomNav();
+    const hasOnboarded = localStorage.getItem('insightx_onboarded');
+    const savedSector  = localStorage.getItem('insightx_sector') || '🔥 新模型速递';
+
+    if (hasOnboarded === 'true') {
+        currentSector = savedSector;
+        document.getElementById('current-sector-label').innerText = currentSector;
+        showScreen('screen-splash');
+        setTimeout(() => {
+            showScreen('screen-main');
+            generateAICards(currentSector);
+        }, 1200);
+    } else {
+        showScreen('screen-onboarding');
+    }
+});
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden-screen'));
+    document.getElementById(id).classList.remove('hidden-screen');
+}
+
+function completeOnboarding(sector) {
+    localStorage.setItem('insightx_onboarded', 'true');
+    localStorage.setItem('insightx_sector', sector);
+    currentSector = sector;
+    document.getElementById('current-sector-label').innerText = sector;
+    showScreen('screen-main');
+    generateAICards(sector);
+}
+
+// ── Sector Modal ───────────────────────────────────────────────
+const modalSector = document.getElementById('modal-sector');
+const modalSectorContent = document.getElementById('modal-sector-content');
+
+function toggleSectorModal() {
+    if (modalSector.classList.contains('opacity-0')) {
+        modalSector.classList.remove('opacity-0', 'pointer-events-none');
+        setTimeout(() => modalSectorContent.classList.remove('translate-y-full'), 10);
+    } else {
+        modalSectorContent.classList.add('translate-y-full');
+        setTimeout(() => modalSector.classList.add('opacity-0', 'pointer-events-none'), 300);
+    }
+}
+
+function switchSector(sector) {
+    currentSector = sector;
+    localStorage.setItem('insightx_sector', sector);
+    document.getElementById('current-sector-label').innerText = sector;
+
+    document.querySelectorAll('.sector-opt').forEach(btn => {
+        const isMatch = btn.innerText.includes(sector);
+        btn.className = isMatch 
+            ? 'w-full text-left px-4 py-3 rounded-xl border flex justify-between items-center sector-opt transition-all border-indigo-500/40 bg-indigo-500/10 text-indigo-300'
+            : 'w-full text-left px-4 py-3 rounded-xl border flex justify-between items-center sector-opt transition-all border-white/5 bg-white/[0.02] text-slate-300 hover:border-white/20';
+        const icon = btn.querySelector('i');
+        if (icon) icon.className = isMatch ? 'ph-fill ph-check-circle text-indigo-400' : '';
+    });
+
+    toggleSectorModal();
+    setTimeout(() => generateAICards(sector), 320);
+}
+
+// ── Bottom Nav ─────────────────────────────────────────────────
+function setupBottomNav() {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.nav-item').forEach(nav => {
+                nav.classList.remove('text-indigo-400');
+                nav.classList.add('text-slate-400');
+                const icon = nav.querySelector('i');
+                if (icon) icon.className = icon.className.replace('ph-fill', 'ph');
+            });
+            item.classList.remove('text-slate-400');
+            item.classList.add('text-indigo-400');
+            const icon = item.querySelector('i');
+            if (icon) icon.className = icon.className.replace(/\bph\b/, 'ph-fill');
+
+            const target = item.dataset.target;
+            document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+            document.getElementById(target).classList.add('active');
+
+            if (target === 'view-matrix') renderMatrixView();
+            if (target === 'view-library') renderLibrary();
+        });
+    });
+}
+
+function switchView(targetId, navEl) {
+    // Handled in click listener
+}
+
+// ── Card Rendering & Intelligence Generator ────────────────────
+async function generateAICards(sector) {
+    if (isGenerating) return;
+    isGenerating = true;
+
+    const container   = document.getElementById('card-container');
+    const refreshIcon = document.getElementById('refresh-icon');
+    const aiStatus    = document.getElementById('ai-status-bar');
+
+    container.style.opacity = '0';
+    container.style.transform = 'translateY(8px) scale(0.98)';
+    await delay(250);
+
+    aiStatus.classList.remove('opacity-0');
+    refreshIcon.classList.add('animate-spin');
+
+    // Skeleton
+    container.innerHTML = `
+        <div class="insight-card p-5 flex flex-col gap-3 shimmer-panel">
+            <div class="flex justify-between items-center mb-2">
+                <div class="h-4 w-24 rounded bg-white/10"></div>
+                <div class="h-4 w-16 rounded bg-white/10"></div>
+            </div>
+            <div class="h-6 w-3/4 rounded bg-white/10 mb-2"></div>
+            <div class="h-20 w-full rounded-xl bg-white/10 mb-3"></div>
+            <div class="h-28 w-full rounded-xl bg-white/10"></div>
+        </div>
+    `;
+    container.style.opacity = '1';
+    container.style.transform = 'translateY(0) scale(1)';
+
+    await delay(500);
+
+    // Pick cards from dataset
+    let cards = CURATED_INTELLIGENCE[sector] || CURATED_INTELLIGENCE['🔥 新模型速递'];
+    currentCards = cards;
+
+    container.style.opacity = '0';
+    await delay(200);
+
+    renderCards(cards);
+
+    container.style.opacity = '1';
+    container.style.transform = 'translateY(0) scale(1)';
+
+    isGenerating = false;
+    aiStatus.classList.add('opacity-0');
+    refreshIcon.classList.remove('animate-spin');
+}
+
+function refreshCards() {
+    generateAICards(currentSector);
+}
+
+function renderCards(cards) {
+    const container = document.getElementById('card-container');
+    container.innerHTML = '';
+    for (let i = cards.length - 1; i >= 0; i--) {
+        createCard(cards[i], i, cards.length);
+    }
+}
+
+function createCard(data, index, total) {
+    const cardEl = document.createElement('div');
+    cardEl.className = 'insight-card p-5';
+    cardEl.style.zIndex = total - index;
+
+    if (index > 0) {
+        cardEl.style.transform = `scale(${1 - index * 0.038}) translateY(${index * 10}px)`;
+        cardEl.style.opacity = 1 - index * 0.18;
+    }
+
+    const tagColor = data.type === 'warning' ? 'var(--color-warning)' : data.type === 'opportunity' ? 'var(--color-success)' : 'var(--color-primary)';
+    
+    // Feature 1: Model Specs Bento Box (for New Model Cards)
+    let specGridHTML = '';
+    if (data.modelSpecs) {
+        specGridHTML = `
+            <div class="bento-spec-grid">
+                <div class="bento-spec-item">
+                    <span class="text-[9px] font-mono-code text-slate-500 uppercase tracking-wider">架构规格</span>
+                    <span class="text-[11px] font-bold text-white truncate">${data.modelSpecs.arch}</span>
+                </div>
+                <div class="bento-spec-item">
+                    <span class="text-[9px] font-mono-code text-slate-500 uppercase tracking-wider">上下文长度</span>
+                    <span class="text-[11px] font-bold text-indigo-300 truncate">${data.modelSpecs.context}</span>
+                </div>
+                <div class="bento-spec-item">
+                    <span class="text-[9px] font-mono-code text-slate-500 uppercase tracking-wider">商用协议</span>
+                    <span class="text-[11px] font-bold text-emerald-400 truncate">${data.modelSpecs.license}</span>
+                </div>
+                <div class="bento-spec-item">
+                    <span class="text-[9px] font-mono-code text-slate-500 uppercase tracking-wider">跑分评测</span>
+                    <span class="text-[11px] font-bold text-amber-300 truncate">${data.modelSpecs.benchmark}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    // Feature 2: Interactive ROI Slider (for Token Pricing Cards)
+    let roiSliderHTML = '';
+    if (data.tokenPricing || data.type === 'warning') {
+        const sliderId = `roi-slider-${data.id}`;
+        const outputId = `roi-output-${data.id}`;
+        roiSliderHTML = `
+            <div class="roi-interactive-box">
+                <div class="flex justify-between items-center text-[10px] font-bold mb-1">
+                    <span class="text-indigo-300 flex items-center gap-1">
+                        <i class="ph-fill ph-sliders"></i> 日均请求推演节省
+                    </span>
+                    <span class="font-mono-code text-emerald-400 font-bold" id="${outputId}">预计月省 ¥18,600 (降幅 82%)</span>
+                </div>
+                <input type="range" min="10" max="300" value="100" class="roi-range-slider" id="${sliderId}"
+                       oninput="updateRoiCalc(this.value, '${outputId}')">
+                <div class="flex justify-between text-[9px] font-mono-code text-slate-500">
+                    <span>10万次/日</span>
+                    <span>100万次/日 (默认)</span>
+                    <span>300万次/日</span>
+                </div>
+            </div>
+        `;
+    }
+
+    // Feature 3: Audio Snippet Waveform Player (for Audio / Podcast Cards)
+    let audioPillHTML = '';
+    if (data.audioSnippet) {
+        audioPillHTML = `
+            <div class="audio-snippet-box cursor-pointer" onclick="toggleAudioSnippet(this, event)">
+                <div class="flex justify-between items-center mb-1.5">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs">
+                            <i class="ph-fill ph-play play-icon"></i>
+                        </div>
+                        <span class="text-[11px] font-bold text-cyan-300">试听现场原声 (${data.audioSnippet.duration})</span>
+                    </div>
+                    <div class="soundwave-bars">
+                        <div class="soundwave-bar"></div>
+                        <div class="soundwave-bar"></div>
+                        <div class="soundwave-bar"></div>
+                        <div class="soundwave-bar"></div>
+                        <div class="soundwave-bar"></div>
+                        <div class="soundwave-bar"></div>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-300 italic leading-relaxed pl-1 border-l-2 border-cyan-500/40">
+                    ${data.audioSnippet.quote}
+                </p>
+                <div class="text-[9px] font-mono-code text-slate-500 mt-1.5 flex justify-between">
+                    <span>${data.audioSnippet.speaker}</span>
+                    <span>时间戳锚点 ${data.audioSnippet.timestamp}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    cardEl.innerHTML = `
+        <div class="stamp-badge like">SAVED</div>
+        <div class="stamp-badge nope">DISCARD</div>
+
+        <!-- Card Header Badges -->
+        <div class="flex justify-between items-center mb-2.5 shrink-0">
+            <div class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full status-dot-glow" style="background-color: ${tagColor}; color: ${tagColor};"></span>
+                <span class="font-bold text-[11px] tracking-wider" style="color: ${tagColor}">${data.tag}</span>
+                <span class="text-[9px] font-mono-code px-2 py-0.5 rounded bg-white/[0.04] border border-white/5 text-slate-400">${data.sourcePlatform.toUpperCase()}</span>
+            </div>
+            <span class="text-[10px] font-mono-code tracking-wider text-slate-400 font-bold">${data.heat}</span>
+        </div>
+
+        <!-- Title -->
+        <h2 class="text-base font-bold mb-1 leading-snug shrink-0 text-white" style="letter-spacing: -0.025em; line-height: 1.35;">${data.title}</h2>
+        ${data.originalTitle ? `<p class="text-[10px] text-slate-500 mb-2 shrink-0 truncate font-mono-code">${data.originalTitle}</p>` : '<div class="mb-2"></div>'}
+
+        <!-- Source pill -->
+        <div class="flex items-center gap-1.5 mb-2.5 shrink-0 text-[10px] text-slate-400 font-mono-code">
+            <span class="truncate max-w-[200px]">${data.source}</span>
+            <span>· ${data.sourceTime}</span>
+        </div>
+
+        <!-- Scrollable Bento Content Body -->
+        <div class="flex-1 overflow-y-auto pr-1 scrollbar-hide flex flex-col gap-2 pb-2 min-h-0">
+            
+            ${specGridHTML}
+            ${roiSliderHTML}
+            ${audioPillHTML}
+
+            ${data.summary ? `
+            <div class="p-3 rounded-xl border border-white/5 bg-white/[0.02] flex flex-col gap-1">
+                <span class="text-[9px] uppercase font-bold font-mono-code text-slate-500 tracking-wider">📄 核心事实提炼</span>
+                <p class="text-[11px] leading-relaxed text-slate-300">${data.summary}</p>
+            </div>` : ''}
+
+            <div class="p-3 rounded-xl border border-white/5 bg-white/[0.02] flex flex-col gap-1">
+                <span class="text-[9px] uppercase font-bold font-mono-code text-slate-500 tracking-wider">💰 商业变现与定价</span>
+                <p class="text-[11px] leading-relaxed text-slate-300">${data.monetization}</p>
+                <p class="text-[11px] font-bold text-emerald-400 mt-0.5">${data.roi}</p>
+            </div>
+
+            <div class="p-3 rounded-xl border border-white/5 bg-white/[0.02] flex flex-col gap-1">
+                <span class="text-[9px] uppercase font-bold font-mono-code text-slate-500 tracking-wider">🎯 落地场景与风险阻碍</span>
+                <p class="text-[11px] leading-relaxed text-slate-300">${data.useCase}</p>
+                <p class="text-[11px] text-amber-400 mt-0.5">${data.friction}</p>
+            </div>
+
+            <div class="p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.05]">
+                <span class="font-bold block mb-1 text-[9px] text-indigo-400 uppercase font-mono-code flex items-center gap-1">
+                    <i class="ph-fill ph-crosshair"></i> 商业战略行动建议
+                </span>
+                <p class="text-[11px] leading-relaxed text-indigo-200/90">${data.action}</p>
+            </div>
+        </div>
+
+        <!-- Bottom Action CTA -->
+        <button class="w-full mt-2.5 shrink-0 font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 transition-all bg-indigo-500 text-white hover:bg-indigo-600 active:scale-[0.98] shadow-[0_4px_20px_rgba(99,102,241,0.3)]"
+                onclick="openSourceModal('${escapeStr(data.title)}', '${data.sourceType}', '${escapeStr(data.summary)}')">
+            <i class="ph-fill ph-file-text text-sm"></i>
+            <span class="text-xs tracking-wide">查看深度拆解与完整出处</span>
+        </button>
+    `;
+
+    document.getElementById('card-container').appendChild(cardEl);
+    if (index === 0) makeCardDraggable(cardEl, data);
+}
+
+function escapeStr(s) {
+    return (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
+}
+
+// ── Interactive ROI Calculator ─────────────────────────────────
+function updateRoiCalc(val, outputId) {
+    const el = document.getElementById(outputId);
+    if (!el) return;
+    const factor = parseInt(val) / 100;
+    const baseSavings = 18600;
+    const savings = Math.round(baseSavings * factor);
+    el.innerText = `预计月省 ¥${savings.toLocaleString()} (降幅 82%)`;
+}
+
+// ── Interactive Audio Snippet Player ───────────────────────────
+function toggleAudioSnippet(box, event) {
+    event.stopPropagation();
+    const playIcon = box.querySelector('.play-icon');
+    const bars     = box.querySelectorAll('.soundwave-bar');
+
+    if (activeAudioPill === box) {
+        // Pause
+        bars.forEach(b => b.classList.remove('playing'));
+        playIcon.className = 'ph-fill ph-play play-icon';
+        activeAudioPill = null;
+        if (audioTimer) clearInterval(audioTimer);
+    } else {
+        // Stop any previous
+        if (activeAudioPill) {
+            activeAudioPill.querySelectorAll('.soundwave-bar').forEach(b => b.classList.remove('playing'));
+            const prevIcon = activeAudioPill.querySelector('.play-icon');
+            if (prevIcon) prevIcon.className = 'ph-fill ph-play play-icon';
+        }
+
+        // Start playing
+        bars.forEach(b => b.classList.add('playing'));
+        playIcon.className = 'ph-fill ph-pause play-icon';
+        activeAudioPill = box;
+
+        // Auto stop after 30s
+        if (audioTimer) clearInterval(audioTimer);
+        audioTimer = setTimeout(() => {
+            if (activeAudioPill === box) {
+                bars.forEach(b => b.classList.remove('playing'));
+                playIcon.className = 'ph-fill ph-play play-icon';
+                activeAudioPill = null;
+            }
+        }, 30000);
+    }
+}
+
+// ── Touch & Drag Physics (Tinder Triage) ─────────────────────────
+function makeCardDraggable(card, data) {
+    let isDragging = false, startX = 0, startY = 0, currentX = 0, currentY = 0;
+    const badgeLike = card.querySelector('.stamp-badge.like');
+    const badgeNope = card.querySelector('.stamp-badge.nope');
+
+    function onPointerDown(e) {
+        if (e.target.closest('input') || e.target.closest('button') || e.target.closest('.audio-snippet-box')) return;
+        isDragging = true;
+        card.classList.add('dragging');
+        startX = e.clientX || (e.touches && e.touches[0].clientX);
+        startY = e.clientY || (e.touches && e.touches[0].clientY);
+    }
+
+    function onPointerMove(e) {
+        if (!isDragging) return;
+        const x = e.clientX || (e.touches && e.touches[0].clientX);
+        const y = e.clientY || (e.touches && e.touches[0].clientY);
+        currentX = x - startX;
+        currentY = y - startY;
+
+        const rotate = currentX * 0.07;
+        card.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${rotate}deg)`;
+
+        if (currentX > 30) {
+            badgeLike.style.opacity = Math.min((currentX - 30) / 70, 1);
+            badgeNope.style.opacity = 0;
+        } else if (currentX < -30) {
+            badgeNope.style.opacity = Math.min((-currentX - 30) / 70, 1);
+            badgeLike.style.opacity = 0;
+        } else {
+            badgeLike.style.opacity = 0;
+            badgeNope.style.opacity = 0;
+        }
+    }
+
+    function onPointerUp() {
+        if (!isDragging) return;
+        isDragging = false;
+        card.classList.remove('dragging');
+
+        const threshold = 90;
+        if (currentX > threshold) {
+            // Swipe right -> SAVE
+            card.style.transform = `translate(${currentX + 500}px, ${currentY}) rotate(30deg)`;
+            card.style.opacity = '0';
+            saveCardToLibrary(data);
+            advanceCardStack();
+        } else if (currentX < -threshold) {
+            // Swipe left -> DISCARD
+            card.style.transform = `translate(${currentX - 500}px, ${currentY}) rotate(-30deg)`;
+            card.style.opacity = '0';
+            advanceCardStack();
+        } else {
+            // Spring back
+            card.style.transform = 'translate(0px, 0px) rotate(0deg)';
+            badgeLike.style.opacity = 0;
+            badgeNope.style.opacity = 0;
+        }
+    }
+
+    card.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+
+    card.addEventListener('touchstart', onPointerDown, { passive: true });
+    window.addEventListener('touchmove', onPointerMove, { passive: true });
+    window.addEventListener('touchend', onPointerUp);
+}
+
+function advanceCardStack() {
+    setTimeout(() => {
+        currentCards.shift();
+        renderCards(currentCards);
+        if (currentCards.length === 0) {
+            document.getElementById('card-container').innerHTML = `
+                <div class="h-full flex flex-col justify-center items-center text-center px-6">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-3">
+                        <i class="ph-fill ph-check-circle text-2xl"></i>
+                    </div>
+                    <div class="text-sm font-bold text-white">已处理完该赛道所有情报</div>
+                    <div class="text-xs text-slate-400 mt-1 mb-4">随时点击刷新获取下一批最新资讯</div>
+                    <button class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold transition-colors"
+                            onclick="refreshCards()">重新加载</button>
+                </div>
+            `;
+        }
+    }, 280);
+}
+
+// ── Library & Bookmarking ──────────────────────────────────────
+function saveCardToLibrary(card) {
+    if (!savedItems.some(item => item.id === card.id)) {
+        savedItems.unshift(card);
+        localStorage.setItem('insightx_saved', JSON.stringify(savedItems));
+        const dot = document.getElementById('library-dot');
+        if (dot) dot.style.opacity = '1';
+    }
+}
+
+function renderLibrary() {
+    const list = document.getElementById('library-list');
+    const empty = document.getElementById('empty-library');
+    const countEl = document.getElementById('saved-count');
+    const dot = document.getElementById('library-dot');
+    if (dot) dot.style.opacity = '0';
+
+    try {
+        const raw = localStorage.getItem('insightx_saved');
+        if (raw) savedItems = JSON.parse(raw);
+    } catch(e) {}
+
+    countEl.innerText = `${savedItems.length} 篇`;
+
+    if (savedItems.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+
+    empty.classList.add('hidden');
+    list.innerHTML = savedItems.map(item => `
+        <div class="p-3.5 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all cursor-pointer"
+             onclick="openSourceModal('${escapeStr(item.title)}', '${item.sourceType}', '${escapeStr(item.summary)}')">
+            <div class="flex justify-between items-center mb-1.5">
+                <span class="text-[10px] font-bold text-indigo-400 tracking-wide">${item.tag}</span>
+                <span class="text-[9px] font-mono-code text-slate-500">${item.source}</span>
+            </div>
+            <div class="text-xs font-bold text-white line-clamp-2 leading-snug mb-1">${item.title}</div>
+            <div class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">${item.summary}</div>
+        </div>
+    `).join('');
+}
+
+function filterLibrary(type, btn) {
+    document.querySelectorAll('.lib-filter-btn').forEach(b => {
+        b.className = 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/[0.03] text-slate-400 border border-white/5 hover:text-white lib-filter-btn';
+    });
+    btn.className = 'px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/10 text-white border border-white/15 lib-filter-btn';
+
+    const list = document.getElementById('library-list');
+    const filtered = (type === 'all') ? savedItems : savedItems.filter(i => i.type === type);
+    list.innerHTML = filtered.map(item => `
+        <div class="p-3.5 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all cursor-pointer"
+             onclick="openSourceModal('${escapeStr(item.title)}', '${item.sourceType}', '${escapeStr(item.summary)}')">
+            <div class="flex justify-between items-center mb-1.5">
+                <span class="text-[10px] font-bold text-indigo-400 tracking-wide">${item.tag}</span>
+                <span class="text-[9px] font-mono-code text-slate-500">${item.source}</span>
+            </div>
+            <div class="text-xs font-bold text-white line-clamp-2 leading-snug mb-1">${item.title}</div>
+            <div class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">${item.summary}</div>
+        </div>
+    `).join('');
+}
+
+function exportLibraryMarkdown() {
+    if (savedItems.length === 0) {
+        alert('当前智库尚无收藏内容');
+        return;
+    }
+    const md = savedItems.map((item, idx) => `
+### ${idx+1}. ${item.title}
+- **标签**: ${item.tag} | 来源: ${item.source}
+- **商业模式/定价**: ${item.monetization}
+- **ROI 效能**: ${item.roi}
+- **落地阻碍**: ${item.friction}
+- **战略建议**: ${item.action}
+- **概述**: ${item.summary}
+    `).join('\n---\n');
+
+    navigator.clipboard.writeText(md).then(() => {
+        alert('已复制智库 Markdown 到剪贴板！');
+    }).catch(() => {
+        alert('复制失败，请重试');
+    });
+}
+
+// ── Matrix Radar ───────────────────────────────────────────────
+function renderMatrixView() {
+    const area = document.getElementById('matrix-nodes-area');
+    document.getElementById('matrix-count').innerText = `${currentCards.length} 节点`;
+
+    // Coordinates mapping
+    area.querySelectorAll('.matrix-node').forEach(n => n.remove());
+
+    const coords = [
+        { x: 28, y: 32 },
+        { x: 65, y: 22 },
+        { x: 45, y: 70 },
+        { x: 80, y: 60 }
+    ];
+
+    currentCards.forEach((card, idx) => {
+        const coord = coords[idx % coords.length];
+        const node = document.createElement('div');
+        node.className = 'matrix-node absolute cursor-pointer';
+        node.style.left = `${coord.x}%`;
+        node.style.top  = `${coord.y}%`;
+        node.style.setProperty('--node-color', card.type === 'warning' ? '#F59E0B' : card.type === 'opportunity' ? '#10B981' : '#6366F1');
+
+        node.innerHTML = `
+            <div class="matrix-node-core"></div>
+            <span class="absolute top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-bold text-slate-300 bg-black/75 px-1.5 py-0.5 rounded border border-white/10 pointer-events-none">
+                ${card.title.slice(0, 10)}...
+            </span>
+        `;
+
+        node.onclick = () => {
+            document.getElementById('matrix-detail-title').innerText = card.title;
+            document.getElementById('matrix-detail-desc').innerText = `【落地场景】${card.useCase} \n【变现逻辑】${card.monetization}`;
+            document.getElementById('matrix-detail-dot').style.backgroundColor = node.style.getPropertyValue('--node-color');
+        };
+
+        area.appendChild(node);
+    });
+}
+
+// ── Source Modal ───────────────────────────────────────────────
+function openSourceModal(title, type, summary) {
+    const modal = document.getElementById('modal-source');
+    document.getElementById('source-title').innerText = title;
+    document.getElementById('source-content-area').innerHTML = `
+        <div class="max-w-xl mx-auto flex flex-col gap-4">
+            <div class="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300 leading-relaxed">
+                💡 本文由 InsightX 商业情报引擎结构化解构，已完成对技术噪声与 PR 通稿的降噪过滤。
+            </div>
+            <h1 class="text-lg font-bold text-white tracking-tight">${title}</h1>
+            <div class="text-xs text-slate-300 leading-relaxed whitespace-pre-line">${summary}</div>
+            <div class="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-xs text-slate-400 leading-relaxed">
+                <span class="text-white font-bold block mb-1">溯源核验机制：</span>
+                所有引用的 ROI 效能数据及核心定价数字均已校验原文出处，若原文未包含实测依据，系统已标注“未提及”，杜绝大模型盲目脑补。
+            </div>
+        </div>
+    `;
+    modal.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+}
+
+function closeSourceModal() {
+    const modal = document.getElementById('modal-source');
+    modal.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+}
+
+// ── Settings Modal ─────────────────────────────────────────────
+function openSettingsModal() {
+    const modal = document.getElementById('modal-settings');
+    const content = document.getElementById('modal-settings-content');
+    document.getElementById('input-qwen').value = localStorage.getItem('insightx_qwen_key') || '';
+    document.getElementById('input-youtube').value = localStorage.getItem('insightx_youtube_key') || '';
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    setTimeout(() => content.classList.remove('translate-y-full'), 10);
+}
+
+function closeSettingsModal() {
+    const modal = document.getElementById('modal-settings');
+    const content = document.getElementById('modal-settings-content');
+    content.classList.add('translate-y-full');
+    setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
+}
+
+function saveApiKeys() {
+    const qwen = document.getElementById('input-qwen').value.trim();
+    const yt   = document.getElementById('input-youtube').value.trim();
+
+    if (qwen) localStorage.setItem('insightx_qwen_key', qwen);
+    else localStorage.removeItem('insightx_qwen_key');
+
+    if (yt) localStorage.setItem('insightx_youtube_key', yt);
+    else localStorage.removeItem('insightx_youtube_key');
+
+    closeSettingsModal();
+    refreshCards();
+}
+
+function clearApiKeys() {
+    localStorage.removeItem('insightx_qwen_key');
+    localStorage.removeItem('insightx_youtube_key');
+    document.getElementById('input-qwen').value = '';
+    document.getElementById('input-youtube').value = '';
+    closeSettingsModal();
+    refreshCards();
+}
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+</script>
+</body>
+</html>
