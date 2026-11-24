@@ -1,113 +1,111 @@
-# InsightX 2.0 (AI 商业决策参谋)
+<h1 align="center">InsightX 2.0</h1>
 
-> **极简高信噪比的 AI 商业决策雷达**：新模型速递 · Token 经济学 · 播客长音频原声解密。  
-> 专为商业化产品经理、业务负责人及一级市场投资人打造。
+<p align="center"><strong>An AI intelligence desk for product and business decisions.</strong><br>Discover releases, compare token costs, listen to source audio, and turn a shortlist into a research brief.</p>
 
-## 🎬 产品宣传片
+<p align="center"><a href="#quick-start">Quick start</a> · <a href="#how-it-works">Workflow</a> · <a href="#api-reference">API</a> · <a href="#documentation">Documentation</a></p>
+
+## See it in action
 
 https://github.com/user-attachments/assets/06a27e40-b8fd-49e5-8eed-ed9f997f1569
 
----
+## Why InsightX
 
-## 💡 解决什么痛点？它能干什么？
+A model announcement answers one question. A rollout decision needs several more. What actually shipped? What does the license allow? How does the price affect your traffic? Where can a teammate check the original source?
 
-追踪 AI 商业动态并做出技术选型与预算决策，往往需要 **刷十几个信息源 → 过滤 90% 公关水稿 → 啃完两小时播客找一句关键原话 → 手动换算各家定价单位 → 整理成团队研报**，动辄耗时大半天。
+InsightX collects those questions around a reviewable card. Product managers, AI business leads, and early-stage investors can triage updates quickly and spend their time on the records worth investigating. The browser workbench has no build step. A local FastAPI service adds aggregation, model-assisted extraction, and database-backed cards.
 
-**InsightX 2.0** 将整套情报获取与商业分析链路浓缩到一个极简高信噪比的决策参谋工作台里：
+## How it works
 
-- **输入**：选定核心决策赛道（新模型速递 / Token 经济学 / 播客与财报原声 / SaaS 商业化）+ 多端口并发采集（支持浏览器直连、FastAPI 后端或离线内置样例）；
-- **输出**：结构化商业情报卡片（Bento 2×2 参数格、交互式 ROI 算账滑块、30s 播客原声定位、2D 战略态势散点雷达）+ **一键导出 Markdown 决策研报**；
-- **隐私与成本**：单页前端无需构建即可在**本地浏览器开箱即用**，API Key 与偏好严格保存于本地 `localStorage`，零密钥泄露风险。
+1. **Pick a track.** Follow model launches, token economics, podcast and earnings coverage, or SaaS commercialization.
+2. **Inspect the intake.** The feed opens when eight cards are ready and caps its active queue at twenty. Channel telemetry shows where items came from and distinguishes live results from built-in examples, empty responses, and failed requests.
+3. **Triage the stack.** Swipe left to dismiss or right to save a card. Open the detail view to inspect its analysis and the available primary-source link.
+4. **Work through the evidence.** Compare technical specifications, estimate token costs, open the source audio where available, or inspect a card in the matrix.
+5. **Keep what is useful.** Filter saved cards in the vault and copy a Markdown brief for further editing or team notes.
 
----
+## What you can do
 
-## 🔄 核心使用流程
+| Workspace | What it helps you decide |
+| --- | --- |
+| **Feed and telemetry** | See which channels supplied eligible items and whether a result is live, empty, failed, or a sample. |
+| **Bento specifications** | Review architecture, context window, license, and benchmark information when the source provides it. |
+| **Token cost calculator** | Change daily volume from 200,000 to 5,000,000 tokens and compare prices on the same currency and unit basis. |
+| **Podcast cards** | Open the episode or play available RSS audio. A source may provide an excerpt, a full episode, or metadata only. |
+| **Decision matrix** | Compare estimated deployment friction and business value. Items awaiting a score are marked accordingly. |
+| **Vault** | Keep shortlisted items together and copy a Markdown summary to the clipboard. |
 
-```text
-① 选定决策赛道 ──▶ ② 多端口并发扫描 & 8 卡门禁解锁 ──▶ ③ 左滑忽略噪音 / 右滑收藏入库 ──▶ ④ 深度算账 & 矩阵透视 & 一键导出 MD
+### Example: estimate a monthly token-cost change
+
+Take an illustrative workload of 2,000,000 tokens per day. At ¥5 per million tokens the 30-day cost is ¥300. At ¥2 per million it is ¥120. The estimated difference is **¥180 per month**, or 60% of the original token line item.
+
+The calculation is `daily tokens × 30 ÷ 1,000,000 × (old unit price − new unit price)`. For a decision memo, record the currency, the billing unit, and the input/output mix behind the rates you selected. If comparable prices are unavailable, the app leaves the estimate unavailable.
+
+### Where the feed comes from
+
+Browser-side fetches can supplement a local aggregation service. Backend sources include Hacker News, DEV Community, GitHub releases for vLLM and Transformers, and the public Latent Space podcast RSS feed. Other channels can show bundled examples or no results when live data is unavailable. Examine the source and status before citing a card in a decision.
+
+## Quick start
+
+### Open the browser workbench
+
+Open [frontend/index.html](frontend/index.html) from your local checkout in a browser. Pick a track and start with the cards that are available. Browser-based requests depend on network access and each provider's cross-origin rules. Labeled sample cards provide a way to explore the interface when a live source is unavailable.
+
+### Start the optional FastAPI service
+
+From the repository root:
+
+```bash
+cd backend
+python -m venv .venv
 ```
 
----
+Activate the environment with `source .venv/bin/activate` on macOS or Linux, or `.venv\Scripts\Activate.ps1` on Windows PowerShell. Then run:
 
-## ✨ 核心功能清单
-
-1. ⚡ **多端口并发检索与 8 卡门禁 (Omnichannel & Gatekeeper)**
-   - **全端口透明遥测**：并发检索 HuggingFace、HackerNews、IT之家、36氪、GitHub Trending、Token 定价雷达、小宇宙等渠道，可在遥测大盘实时查看各端口状态、耗时与埋点日志；
-   - **8 卡门禁与 20 张缓冲限额**：集齐满 8 张高信噪比卡片自动解锁浏览流，队列严格限制在 20 张以内，拒绝信息过载。
-2. 🃏 **Tinder 式手势分拣与三大特化组件 (Smart Decision Cards)**
-   - **极简划卡分拣**：卡片堆叠浏览，**← 左滑忽略**公关通稿，**右滑收藏 →** 归档至智库；点击卡片可展开完整深度拆解与原文出处；
-   - **🏷️ Bento 2×2 参数格**：将架构规格、上下文长度、商用协议与跑分评测浓缩进 4 格卡片，1 秒看穿技术硬指标；
-   - **🎚️ 交互式 ROI 动态推演滑块**：对同口径降价情报，拖动日调用量滑块（20 万–500 万 Token/日），实时换算月省金额与降幅；
-   - **🎙️ 播客与财报原声定位胶囊**：攻克长音频收听门槛，直接锚定创始人发言时间戳、原声金句与节目出处链接。
-3. 📊 **二维战略态势矩阵 (Matrix Radar)**
-   - **一图锁定高价值区**：以「技术/合规落地阻碍」为横轴、「商业价值与 ROI」为纵轴构建二维散点图，点击任意散点节点即刻透视 ROI 收益与落地行动建议。
-4. 🔖 **归档智库与一键导出研报 (Vault & Export)**
-   - **分类沉淀与一键输出**：右滑收藏的情报自动按「颠覆预警 / 增长机遇 / 模式观察」分类管理，支持**一键导出结构化 Markdown 研报**，直接对接 Obsidian 或团队周报。
-
----
-
-## ⚡ 快速体验 (Quick Start)
-
-### 方式一：前端纯客户端即开即用（无需安装任何环境）
-前端无需构建，可使用浏览器直连部分公开来源。采集不可用时会显示标有「样例」的内置卡片。
-1. 直接在电脑浏览器中双击打开 `frontend/index.html`；
-2. 可体验卡片滑动、Bento 参数格和基于同口径单价的 Token 成本推演；
-3. 点击右上角设置图标，可配置本地私有的大模型 API Key（仅存储于浏览器本地 `localStorage`）。
-
-### 方式二：启动 Python FastAPI 后端服务
 ```bash
-# 1. 进入后端目录
-cd backend
-
-# 2. 安装 Python 依赖
-pip install -r requirements.txt
-
-# 3. 复制环境变量并配置密钥
-cp .env.example .env
-
-# 4. 启动服务
+python -m pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
-启动后访问 `http://localhost:8000/docs` 可查阅 OpenAPI / Swagger 接口文档。
 
-前端自动连接本机 8000 端口的聚合接口。在线渠道包括 Hacker News、DEV.to、vLLM 和 Transformers 官方发布，以及 Latent Space 的公开播客 RSS。播客卡可播放 RSS 提供的节目音频。若需换源，在 `backend/.env` 中设置 `PODCAST_RSS_URL`，并重启后端。
+Open [the local interactive API docs](http://127.0.0.1:8000/docs) and use the browser workbench with the service running on port 8000. To configure providers, copy [backend/.env.example](backend/.env.example) to `backend/.env` and supply the relevant settings. Set `PODCAST_RSS_URL` and restart the service to try another public podcast feed.
 
----
+## API reference
 
-## 📂 项目工程结构
+| Route | Purpose |
+| --- | --- |
+| `GET /api/health` | Check whether the local service is ready to respond. |
+| `GET /api/omni-feed` | Aggregate feed items and return per-channel outcomes. |
+| `GET /api/channels/status` | List configured channels and their metadata. |
+| `GET /api/cards` | Read stored cards, optionally filtered by track. |
+| `GET /api/stats` | Count stored cards by track. |
+| `POST /api/ingest` | Extract and store items from a bounded batch, with duplicate and failure counts. |
+| `POST /api/custom-extract` | Turn manually supplied text into a structured card and store the result on success. |
+| `POST /api/test-connection` | Check whether a configured model can return a usable response. |
+| `GET /api/telemetry` | Inspect recent backend telemetry events. |
 
-```text
-InsightX/
-├── .gitignore               # 规范的依赖与环境过滤规则
-├── LICENSE                  # MIT 开源协议
-├── README.md                # 项目主说明文档
-├── docs/
-│   ├── PRD_v2.0.md          # 完整的 PRD 2.0 需求规格文档
-│   ├── ARCHITECTURE.md      # 系统技术架构与数据流图
-│   └── PRD_v1.0_legacy.md   # 历史 v1.0 需求存档
-├── frontend/
-│   └── index.html           # Linear 风格 Obsidian 极暗美学单页客户端
-├── backend/
-│   ├── app/
-│   │   ├── main.py          # FastAPI 服务入口
-│   │   ├── config.py        # 环境变量配置
-│   │   ├── models/          # Pydantic 商业情报数据模型
-│   │   └── services/        # 抓取、Whisper 转录与 LLM 提取逻辑
-│   ├── requirements.txt     # 后端依赖声明
-│   └── .env.example         # 环境变量配置模板
-└── archive/                 # 历史迭代草稿与早期脚手架存档
-```
+## Architecture and data handling
 
----
+- **[Browser client](frontend/index.html).** A single-page front end manages navigation, interactions, the card queue, and the local vault. On that browser origin, preferences, saved cards, and browser-side provider configuration are stored in `localStorage`.
+- **[API service](backend/app/main.py).** FastAPI exposes aggregation, extraction, connection checks, and card reads. A local SQLite database persists cards created through the backend.
+- **Provider calls.** Enabling a model integration sends the data needed for its requests to the selected endpoint. Store backend credentials in the local environment. Treat browser-side API keys as sensitive browser data.
+- **Evidence and estimates.** Source availability varies. Verify the original license, benchmark, or price before making a decision. A cost projection applies to its entered rates and volume.
 
-## 🛡️ 安全与隐私规范 (Security & Privacy)
+## Working with a shortlist
 
-- **零密钥泄露**：全量源码中不包含任何硬编码 API Key；
-- **本地自治**：前端仅在本地浏览器 `localStorage` 中记录用户偏好与配置的 API 密钥；
-- **事实求真**：所有引用的 ROI 效能数据及定价均附带溯源校验机制，杜绝大模型盲目脑补。
+A useful shortlist is small enough that every saved item can be traced back to a release, episode, or other source. For a model evaluation, save the release first, then record which workload, context limit, and license you are comparing. Use the matrix to prioritize what to investigate and the Markdown output to share those questions.
 
----
+| If you see this | What to check |
+| --- | --- |
+| The feed stays in its waiting state | Inspect channel telemetry and retry after enough distinct items are available. |
+| A source is marked as a sample | Use it to explore the interface and open the original publication when making a real decision. |
+| There is no cost projection | Check that the old and new rates use the same currency and billing unit. |
+| No audio player appears | Open the source episode link if one is available. A playable enclosure depends on the feed. |
+| Extraction returns an error | Check the model endpoint, model name, and response format. Failed extractions are reported separately from stored cards. |
 
-## 📄 授权协议 (License)
+## Documentation
 
-本项目采用 [MIT License](LICENSE) 授权许可。
+- [Architecture and data flow](docs/ARCHITECTURE.md)
+- [Product requirements](docs/PRD_v2.0.md)
+- [Repository index](REPO_INDEX.md)
+- [Project handover](HANDOVER.md)
+- [Showreel source](insightx-showreel-v2)
+
+Licensed under the [MIT License](LICENSE).
