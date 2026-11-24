@@ -3,11 +3,9 @@
 > **极简高信噪比的 AI 商业决策雷达**：新模型速递 · Token 经济学 · 播客长音频原声解密。  
 > 专为商业化产品经理、业务负责人及一级市场投资人打造。
 
-## 🎬 30 秒产品实操宣传片
+## 🎬 产品实操演示
 
-[![InsightX 2.0 30s Showreel](./insightx-showreel-v2/out/poster.png)](https://github.com/hbin-max/InsightX-2.0/releases/download/v2.0.0/InsightX-2.0-Showreel-30s.mp4)
-
-> 👆 点击上方封面图即可观看 / 下载 **1080p 30s 实操宣传片**（[直链下载 MP4](https://github.com/hbin-max/InsightX-2.0/releases/download/v2.0.0/InsightX-2.0-Showreel-30s.mp4) · 动效源码位于 [`insightx-showreel-v2/`](./insightx-showreel-v2)）。
+https://github.com/user-attachments/assets/06a27e40-b8fd-49e5-8eed-ed9f997f1569
 
 ---
 
