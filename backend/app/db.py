@@ -1,7 +1,7 @@
 import sqlite3
 import json
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "insightx.db")
 
@@ -48,15 +48,28 @@ def init_db():
     conn.close()
 
 def save_card(card: Dict[str, Any]) -> int:
+    return save_card_with_status(card)[0]
+
+
+def save_card_with_status(card: Dict[str, Any]) -> Tuple[int, bool]:
+    # Serialize the duplicate check and insertion across simultaneous requests.
     conn = get_connection()
+    try:
+        with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            return _insert_card(conn, card)
+    finally:
+        conn.close()
+
+
+def _insert_card(conn, card: Dict[str, Any]) -> Tuple[int, bool]:
     cursor = conn.cursor()
     
     # Check for title duplicates
     cursor.execute("SELECT id FROM cards WHERE title = ?", (card.get("title", ""),))
     row = cursor.fetchone()
     if row:
-        conn.close()
-        return row["id"]
+        return row["id"], False
 
     cursor.execute("""
     INSERT INTO cards (
@@ -88,13 +101,10 @@ def save_card(card: Dict[str, Any]) -> int:
         json.dumps(card.get("modelSpecs") or card.get("model_specs", {}), ensure_ascii=False) if (card.get("modelSpecs") or card.get("model_specs")) else None,
         json.dumps(card.get("tokenPricing") or card.get("token_pricing", {}), ensure_ascii=False) if (card.get("tokenPricing") or card.get("token_pricing")) else None,
         json.dumps(card.get("audioSnippet") or card.get("audio_snippet", {}), ensure_ascii=False) if (card.get("audioSnippet") or card.get("audio_snippet")) else None,
-        card.get("matrixX") or card.get("matrix_x", 50),
-        card.get("matrixY") or card.get("matrix_y", 50)
+        card.get("matrixX", card.get("matrix_x", 50)),
+        card.get("matrixY", card.get("matrix_y", 50))
     ))
-    new_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return new_id
+    return cursor.lastrowid, True
 
 def get_cards(sector: Optional[str] = None, limit: int = 60) -> List[Dict[str, Any]]:
     conn = get_connection()

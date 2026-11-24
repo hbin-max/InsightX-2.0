@@ -4,6 +4,10 @@ from typing import Dict, Any, Optional
 from app.config import settings
 from app.services.http_client import post_json
 
+class ExtractionError(Exception):
+    pass
+
+
 async def call_llm(
     system_prompt: str,
     user_prompt: str,
@@ -82,6 +86,7 @@ async def extract_structured_card(
 - matrix_y: 商业价值/ROI分数 (10到95整数，越大商业价值越高)
 """
 
+    system_prompt += "\n未披露的参数、定价与实测收益必须明确标为未披露，不要补造数字。"
     user_prompt = f"【赛道】：{sector}\n【标题】：{title}\n【内容片段】：\n{raw_content[:1500]}"
 
     try:
@@ -96,28 +101,14 @@ async def extract_structured_card(
         cleaned = re.sub(r"^```json\s*", "", raw_resp.strip(), flags=re.IGNORECASE)
         cleaned = re.sub(r"```$", "", cleaned.strip())
         parsed = json.loads(cleaned)
+        if not isinstance(parsed, dict) or not isinstance(parsed.get("summary"), str) or not parsed["summary"].strip():
+            raise ValueError("Missing structured summary")
         parsed["title"] = parsed.get("chinese_title") or title
         parsed["original_title"] = title
         parsed["sector"] = sector
         return parsed
-    except Exception as e:
-        print(f"[LLM Extractor] Error: {e}")
-        return {
-            "sector": sector,
-            "type": "opportunity",
-            "tag": "实时情报",
-            "heat": "匹配度 92%",
-            "title": f"【最新洞察】{title}",
-            "original_title": title,
-            "summary": raw_content[:200] or "抓取自权威公开科技源与技术社区的实时资讯。",
-            "monetization": "基于当前行业普遍按用量计费与席位制探索商业化模式。",
-            "roi": "预计可为同类应用场景降低综合接入与运营成本约 30%-50%。",
-            "use_case": "企业流程自动化、智能知识库辅助、多模态内容生产。",
-            "friction": "目前依赖公有云环境稳定度，需做好端到端容灾降级准备。",
-            "action": "建议产研负责人持续追踪该技术演进，评估与现有业务结合点。",
-            "matrix_x": 40,
-            "matrix_y": 75
-        }
+    except Exception as error:
+        raise ExtractionError("模型提炼失败，请检查模型配置后重试。") from error
 
 async def test_llm_connection(
     protocol: str = "openai",
@@ -134,6 +125,8 @@ async def test_llm_connection(
             api_key=api_key,
             model=model
         )
+        if not isinstance(content, str) or not content.strip():
+            return {"status": "error", "message": "模型未返回有效正文"}
         return {"status": "ok", "response": content}
     except Exception as e:
         return {"status": "error", "message": str(e)}

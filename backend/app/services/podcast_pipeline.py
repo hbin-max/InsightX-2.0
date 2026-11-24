@@ -1,12 +1,49 @@
 import subprocess
 import shutil
 import os
-import json
 import re
-import urllib.request
+from email.utils import parsedate_to_datetime
+from html import unescape
+from urllib.parse import urlparse
+from xml.etree import ElementTree
 from typing import List, Dict, Any, Optional
+from app.services.http_client import fetch_text
 
 # ═════════════════════════════════════════════════════════════════
+
+async def fetch_configured_podcast() -> Optional[List[Dict[str, Any]]]:
+    """Read public RSS audio enclosures from an operator-configured feed."""
+    feed_url = os.getenv("PODCAST_RSS_URL", "https://podcast.latent.space/eng.xml").strip()
+    if not feed_url:
+        return None
+    if urlparse(feed_url).scheme not in ("http", "https"):
+        raise ValueError("PODCAST_RSS_URL must use HTTP or HTTPS")
+    feed = ElementTree.fromstring(await fetch_text(feed_url, timeout=8.0))
+    source = feed.findtext("./channel/title") or "播客 RSS"
+    episodes = []
+    for item in feed.findall("./channel/item")[:12]:
+        title = (item.findtext("title") or "").strip()
+        enclosure = item.find("enclosure")
+        audio_url = enclosure.get("url", "") if enclosure is not None else ""
+        if not title or urlparse(audio_url).scheme not in ("http", "https"):
+            continue
+        page_url = item.findtext("link") or ""
+        try:
+            date = parsedate_to_datetime(item.findtext("pubDate") or "").date().isoformat()
+        except (TypeError, ValueError):
+            date = ""
+        episodes.append({
+            "title": title,
+            "summary": " ".join(unescape(re.sub(r"<[^>]*>", " ", item.findtext("description") or "")).split())[:500],
+            "sector": "🎙️ 播客与财报原声",
+            "source": source,
+            "sourcePlatform": "podcast",
+            "sourceType": "audio",
+            "publishDate": date,
+            "url": page_url,
+            "audioSnippet": {"audioUrl": audio_url, "episodeUrl": page_url},
+        })
+    return episodes
 #  PODCAST & AUDIO PIPELINE
 #  - Xiaoyuzhou (小宇宙) RSS & YouTube Podcasts Ingestion
 #  - Automated yt-dlp Audio Snippet Downloader
@@ -111,16 +148,14 @@ def fetch_youtube_podcast_rss() -> List[Dict[str, Any]]:
 
 def run_ytdlp_whisper_pipeline(media_url: str, start_sec: int = 0, duration_sec: int = 30) -> Dict[str, Any]:
     """
-    自动触发 yt-dlp 下载音频切片，并调用 Whisper 转录带时间戳原声。
-    环境未安装 yt-dlp 时自动平滑回退，保障系统永不崩溃。
+    使用 yt-dlp 下载音频切片。
     """
     ytdlp_bin = shutil.which("yt-dlp")
     if not ytdlp_bin:
         print("[PodcastPipeline] Note: yt-dlp not globally installed on system. Using fallback stream metadata.")
         return {
             "status": "fallback",
-            "message": "yt-dlp 未安装在系统 PATH 中，系统已自动转为智能元数据解析模式。",
-            "snippet": "现场原声已根据官方字幕流提取对齐完成。"
+            "message": "yt-dlp 未安装在系统 PATH 中，可通过公开 RSS 播放节目原声。"
         }
 
     output_tmpl = "tmp_audio_clip.%(ext)s"
@@ -133,7 +168,7 @@ def run_ytdlp_whisper_pipeline(media_url: str, start_sec: int = 0, duration_sec:
         media_url
     ]
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=True)
         return {"status": "ok", "clip_path": "tmp_audio_clip.mp3", "stdout": res.stdout[:200]}
     except Exception as e:
         return {"status": "error", "error": str(e)}

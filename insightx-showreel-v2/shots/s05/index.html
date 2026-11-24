@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Shot 05 — 30秒播客原声解密 (17.5-21.5s)</title>
+<style>
+  html, body { margin: 0; background: #FAF5E8; overflow: hidden; width: 100%; height: 100%; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script type="module">
+import { stageSize, setupCanvas } from './motion.js';
+import { loadUIImages } from './comic-kit.js';
+import { renderS05, S05_DUR } from './s05.js';
+
+const { W, H } = stageSize();
+const ctx = setupCanvas(document.getElementById('c'), W, H);
+const U = Math.min(W, H) / 1080;
+
+window.DUR = S05_DUR;
+window.READY = false;
+
+const IMGS = await loadUIImages(['podcast']);
+
+window.render = t => {
+  ctx.save();
+  renderS05(ctx, t, W, H, U, IMGS);
+  ctx.restore();
+};
+
+window.render(0);
+window.READY = true;
+</script>
+</body>
+</html>

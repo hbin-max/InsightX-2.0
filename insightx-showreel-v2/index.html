@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>InsightX 2.0 — 30s Comic-Pop Product Showreel</title>
+<style>
+  html, body { margin: 0; background: #FAF5E8; overflow: hidden; width: 100%; height: 100%; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script type="module" src="./preview.js"></script>
+<script type="module">
+import { DUR, SHOTS, revealOn } from './timeline.js';
+import { stageSize, setupCanvas, seg } from './motion.js';
+import { PALETTE, loadUIImages, drawDiagonalWipe } from './comic-kit.js';
+import { renderS01 } from './shots/s01/s01.js';
+import { renderS02 } from './shots/s02/s02.js';
+import { renderS03 } from './shots/s03/s03.js';
+import { renderS04 } from './shots/s04/s04.js';
+import { renderS05 } from './shots/s05/s05.js';
+import { renderS06 } from './shots/s06/s06.js';
+
+const { W, H } = stageSize();
+const ctx = setupCanvas(document.getElementById('c'), W, H);
+const U = Math.min(W, H) / 1080;
+
+window.DUR = DUR;
+window.READY = false;
+
+const IMGS = await loadUIImages();
+
+// On-beat comic wipe transitions bridging shots seamlessly!
+const WIPES = [
+  { hit: 4.5,  dur: 0.34, color: PALETTE.ink, accent: PALETTE.yellow },
+  { hit: 8.5,  dur: 0.34, color: PALETTE.ink, accent: PALETTE.blue },
+  { hit: 13.0, dur: 0.34, color: PALETTE.ink, accent: PALETTE.yellow },
+  { hit: 17.5, dur: 0.34, color: PALETTE.ink, accent: PALETTE.coral },
+  { hit: 21.5, dur: 0.34, color: PALETTE.ink, accent: PALETTE.mint },
+];
+
+window.render = t => {
+  ctx.save();
+  if (t < 4.5)       renderS01(ctx, t,         W, H, U, IMGS);
+  else if (t < 8.5)  renderS02(ctx, t - 4.5,   W, H, U, IMGS);
+  else if (t < 13.0) renderS03(ctx, t - 8.5,   W, H, U, IMGS);
+  else if (t < 17.5) renderS04(ctx, t - 13.0,  W, H, U, IMGS);
+  else if (t < 21.5) renderS05(ctx, t - 17.5,  W, H, U, IMGS);
+  else               renderS06(ctx, Math.min(8.5, t - 21.5), W, H, U, IMGS);
+
+  // Overlay crisp diagonal comic wipes whose reveal frame lands exactly on the shot cut beat
+  for (const w of WIPES) {
+    const t0 = revealOn(w.hit, w.dur, 0.5);
+    const k = seg(t, t0, t0 + w.dur);
+    if (k > 0 && k < 1) drawDiagonalWipe(ctx, W, H, k, w.color, w.accent);
+  }
+  ctx.restore();
+};
+
+window.render(0);
+window.READY = true;
+</script>
+</body>
+</html>

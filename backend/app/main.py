@@ -1,13 +1,13 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from contextlib import asynccontextmanager
 
 from app.config import settings
-from app.db import init_db, save_card, get_cards, count_cards_by_sector
+from app.db import init_db, save_card_with_status, get_cards, count_cards_by_sector
 from app.services.crawler import crawl_raw_intelligence, crawl_omnichannel_with_telemetry, CHANNEL_METADATA
-from app.services.llm_extractor import test_llm_connection, extract_structured_card
+from app.services.llm_extractor import ExtractionError, test_llm_connection, extract_structured_card
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -93,27 +93,43 @@ async def trigger_ingestion(req: IngestRequest):
         return {"status": "ok", "message": "未能抓取到新数据或源暂无更新", "added_count": 0}
 
     added = []
+    failed = 0
+    duplicates = 0
     for item in raw_items[:4]:  # Batch limit
-        card_data = await extract_structured_card(
-            title=item.get("title", ""),
-            raw_content=item.get("summary", ""),
-            sector=req.sector,
-            protocol=req.protocol,
-            base_url=req.base_url,
-            api_key=req.api_key,
-            model=req.model
-        )
+        try:
+            card_data = await extract_structured_card(
+                title=item.get("title", ""),
+                raw_content=item.get("summary", ""),
+                sector=req.sector,
+                protocol=req.protocol,
+                base_url=req.base_url,
+                api_key=req.api_key,
+                model=req.model
+            )
+        except ExtractionError:
+            failed += 1
+            continue
         card_data["source"] = item.get("source", "全网情报监控")
         card_data["source_platform"] = item.get("sourcePlatform", "web")
         card_data["source_type"] = item.get("sourceType", "article")
-        new_id = save_card(card_data)
+        for field in ("url", "publishDate", "tokenPricing", "audioSnippet"):
+            if item.get(field):
+                card_data[field] = item[field]
+        new_id, inserted = save_card_with_status(card_data)
+        if not inserted:
+            duplicates += 1
+            continue
         card_data["id"] = new_id
         added.append(card_data)
 
+    if failed and not added and not duplicates:
+        raise HTTPException(status_code=502, detail="模型提炼失败，未写入情报。")
     return {
-        "status": "ok",
-        "message": f"成功提取并入库 {len(added)} 篇最新商业情报！",
+        "status": "partial" if failed else "ok",
+        "message": f"新增 {len(added)} 篇，重复 {duplicates} 篇，提炼失败 {failed} 篇。",
         "added_count": len(added),
+        "duplicate_count": duplicates,
+        "failed_count": failed,
         "cards": added
     }
 
@@ -122,19 +138,22 @@ async def custom_extract(req: CustomExtractRequest):
     """
     自定义单篇文本结构化提炼入库接口
     """
-    card_data = await extract_structured_card(
-        title=req.title,
-        raw_content=req.content,
-        sector=req.sector,
-        protocol=req.protocol,
-        base_url=req.base_url,
-        api_key=req.api_key,
-        model=req.model
-    )
+    try:
+        card_data = await extract_structured_card(
+            title=req.title,
+            raw_content=req.content,
+            sector=req.sector,
+            protocol=req.protocol,
+            base_url=req.base_url,
+            api_key=req.api_key,
+            model=req.model
+        )
+    except ExtractionError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
     card_data["source"] = req.source
-    new_id = save_card(card_data)
+    new_id, inserted = save_card_with_status(card_data)
     card_data["id"] = new_id
-    return {"status": "ok", "card": card_data}
+    return {"status": "ok", "card": card_data, "inserted": inserted}
 
 # In-memory telemetry log storage for backend
 _TELEMETRY_LOGS: List[Dict[str, Any]] = []
@@ -174,14 +193,14 @@ async def ingest_telemetry(req: TelemetryBatchRequest):
     return {"status": "ok", "ingested": len(req.events)}
 
 @app.get("/api/telemetry")
-async def get_telemetry(limit: int = 100):
+async def get_telemetry(limit: int = Query(100, ge=0, le=1000)):
     """
     查询最新遥测与异常日志
     """
     return {
         "status": "ok",
         "total": len(_TELEMETRY_LOGS),
-        "logs": _TELEMETRY_LOGS[-limit:]
+        "logs": _TELEMETRY_LOGS[-limit:] if limit else []
     }
 
 @app.post("/api/test-connection")

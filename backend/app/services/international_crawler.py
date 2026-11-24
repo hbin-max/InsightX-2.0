@@ -1,6 +1,65 @@
+import asyncio
 import re
+from datetime import datetime, timezone
 from typing import List, Dict, Any
 from app.services.http_client import fetch_json
+
+
+async def fetch_hackernews_ai() -> List[Dict[str, Any]]:
+    base = "https://hacker-news.firebaseio.com/v0"
+    ids = await fetch_json(f"{base}/topstories.json", timeout=4)
+    stories = await asyncio.gather(
+        *(fetch_json(f"{base}/item/{story_id}.json", timeout=4) for story_id in ids[:24]),
+        return_exceptions=True,
+    )
+    if stories and all(isinstance(story, Exception) for story in stories):
+        raise RuntimeError("Hacker News stories unavailable")
+    items = []
+    for story in stories:
+        if not isinstance(story, dict) or story.get("type") != "story" or story.get("dead") or story.get("deleted"):
+            continue
+        title = story.get("title") or ""
+        if not re.search(r"\b(ai|llms?|gpt|claude|deepseek|openai|anthropic|gemini|agentic|models?)\b", title, re.I):
+            continue
+        discussion = f"https://news.ycombinator.com/item?id={story['id']}"
+        items.append({
+            "title": title, "source": "Hacker News", "sourcePlatform": "hackernews",
+            "sector": "🌐 SaaS 商业化综合", "sourceType": "article",
+            "url": story.get("url") or discussion,
+            "publishDate": datetime.fromtimestamp(story["time"], tz=timezone.utc).date().isoformat(),
+        })
+    return items[:6]
+
+
+async def fetch_devto_ai() -> List[Dict[str, Any]]:
+    articles = await fetch_json("https://dev.to/api/articles?tag=ai&per_page=6",
+                                headers={"Accept": "application/vnd.forem.api-v1+json"}, timeout=6)
+    return [
+        {
+            "title": article["title"], "summary": article.get("description") or "",
+            "source": "DEV.to", "sourcePlatform": "devto", "sector": "🌐 SaaS 商业化综合",
+            "sourceType": "article", "url": article["url"],
+            "publishDate": (article.get("published_at") or "")[:10],
+        }
+        for article in articles if article.get("title") and article.get("url")
+    ]
+
+
+async def fetch_ai_project_releases() -> List[Dict[str, Any]]:
+    async def latest(repo: str) -> Dict[str, Any]:
+        release = await fetch_json(f"https://api.github.com/repos/{repo}/releases/latest", timeout=6)
+        return {
+            "title": f"{repo} · {release['name'] or release['tag_name']}",
+            "summary": " ".join((release.get("body") or "").split())[:500],
+            "source": f"{repo} 官方发布", "sourcePlatform": "releases", "sourceType": "article",
+            "sector": "🔥 新模型速递", "url": release["html_url"],
+            "publishDate": (release.get("published_at") or "")[:10],
+        }
+
+    results = await asyncio.gather(latest("vllm-project/vllm"), latest("huggingface/transformers"), return_exceptions=True)
+    if all(isinstance(result, Exception) for result in results):
+        raise RuntimeError("GitHub release APIs unavailable")
+    return [result for result in results if isinstance(result, dict)]
 
 # ═════════════════════════════════════════════════════════════════
 #  INTERNATIONAL CRAWLER (GitHub, Spotify, X/Twitter, Instagram/Threads)

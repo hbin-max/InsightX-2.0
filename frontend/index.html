@@ -514,7 +514,7 @@
                         </div>
                     </div>
 
-                    <h3 id="gatekeeper-title" class="text-base font-bold text-white mb-1 tracking-tight">正在并发检索全网 9 大情报端口</h3>
+                    <h3 id="gatekeeper-title" class="text-base font-bold text-white mb-1 tracking-tight">正在并发检索已配置的情报源</h3>
                     <p id="gatekeeper-subtitle" class="text-xs text-slate-400 leading-relaxed mb-4 max-w-xs">正在搜索与提炼高价值商业决策卡片，集齐满 8 张将自动解锁情报浏览流...</p>
 
                     <!-- Progress Bar & Count -->
@@ -529,7 +529,7 @@
                     <!-- Omnichannel Live Scanner Badges (9 Ports) -->
                     <div class="w-full">
                         <div class="text-[10px] font-mono-code text-slate-500 uppercase tracking-wider mb-2 text-left flex justify-between">
-                            <span>全端口检索状态 (9 Ports)</span>
+                            <span>全端口检索状态</span>
                             <span id="gatekeeper-channels-status" class="text-slate-400">并发扫描中...</span>
                         </div>
                         <div id="gatekeeper-channel-chips" class="grid grid-cols-3 gap-1.5 text-[9px] font-mono-code">
@@ -542,9 +542,10 @@
                 <div class="w-full bg-white/[0.03] border border-white/5 rounded-xl p-2.5 flex items-center gap-2.5 shrink-0">
                     <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></div>
                     <span class="text-[10px] text-slate-400 font-mono-code truncate" id="gatekeeper-live-ticker">
-                        正在连接全网 9 大端口并启动 DeepSeek 结构化提炼...
+                        正在连接情报源…
                     </span>
                 </div>
+                <button id="gatekeeper-retry" hidden type="button" class="text-xs text-indigo-300 py-2" onclick="refreshCards()">重新扫描</button>
             </div>
 
             <div class="card-stack" id="card-container"></div>
@@ -791,7 +792,7 @@
             <div class="flex justify-between items-center mb-3 shrink-0">
                 <div>
                     <h3 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-                        <i class="ph-fill ph-activity text-indigo-400"></i> 全网 9 大端口雷达遥测与埋点日志
+                        <i class="ph-fill ph-activity text-indigo-400"></i> 情报源状态与日志
                     </h3>
                     <p class="text-[10px] text-slate-400 mt-0.5 font-mono-code">全端口检索 · 异常跳过追踪 · 队列 20 张限额 · 8 张门禁</p>
                 </div>
@@ -814,8 +815,8 @@
             <!-- Tab 1: 9-Port Channels Matrix -->
             <div id="tab-channels" class="telemetry-tab-pane flex flex-col gap-2 overflow-y-auto pr-1 flex-1">
                 <div class="flex justify-between items-center text-[10px] font-mono-code text-slate-400 mb-1 px-1">
-                    <span>9 大搜索端口全景连通状态</span>
-                    <span id="telemetry-channel-summary">9 端口已探测</span>
+                    <span>渠道连通状态</span>
+                    <span id="telemetry-channel-summary">等待扫描</span>
                 </div>
                 <div id="telemetry-channel-grid" class="flex flex-col gap-2">
                     <!-- Populated dynamically with status, latency, yield count, and skip reason -->
@@ -928,7 +929,7 @@ const PRESETS = {
     'deepseek': {
         protocol: 'openai',
         baseUrl: 'https://api.deepseek.com/v1',
-        model: 'deepseek-chat',
+        model: 'deepseek-flash',
         hint: 'https://api.deepseek.com/v1 (DeepSeek-V3 / R1)'
     },
     'openai': {
@@ -981,8 +982,7 @@ let savedItems       = [];
 let currentCards     = [];
 let isGenerating     = false;
 let currentSector    = '🔥 新模型速递';
-let activeAudioPill  = null;
-let audioTimer       = null;
+let activeAudio = null;
 
 // ── Fallback Dataset (Curated Rich Spec & Intelligence) ──────────
 // ── Comprehensive Intelligence Database (Expanded High-Yield Dataset) ──
@@ -2228,7 +2228,12 @@ function switchSector(sector) {
     });
 
     toggleSectorModal();
-    setTimeout(() => generateAICards(sector), 320);
+    if (isGenerating) {
+        pendingGateSector = sector;
+        pendingGateCards = [];
+    } else {
+        generateAICards(sector);
+    }
 }
 
 // ── Bottom Nav ─────────────────────────────────────────────────
@@ -2363,7 +2368,8 @@ const MANDATORY_CHANNELS = [
     { id: 'pricing',     name: 'Token 定价变动雷达', icon: '💰', category: 'pricing', desc: '主流厂商降价监控与单位经济学' },
     { id: 'lmsys',       name: 'LMSYS Arena 天梯',  icon: '🏆', category: 'benchmark', desc: '盲测 Elo 战力与全球天梯排行' },
     { id: 'github',      name: 'GitHub Trending',   icon: '🐙', category: 'code', desc: '全球热门 AI 框架与 Agent 项目' },
-    { id: 'podcast',     name: '小宇宙决策原声',    icon: '📻', category: 'audio', desc: '高管硬核访谈与 30s 试听切片' },
+    { id: 'releases',    name: 'AI 开源项目官方发布', icon: '📦', category: 'code', desc: 'vLLM、Transformers 官方版本记录' },
+    { id: 'podcast',     name: '播客原声',         icon: '📻', category: 'audio', desc: '公开 RSS 节目音频与出处' },
     { id: 'community',   name: '小红书/抖音实操',   icon: '📕', category: 'social', desc: '个人轻创业与工作流变现拆解' },
     { id: '36kr',        name: '36氪 深度科技创投', icon: '📰', category: 'domestic', desc: '大模型商业化与企业落地案例' }
 ];
@@ -2454,7 +2460,7 @@ class InsightXTelemetryEngine {
             this.channels[channelKey].lastChecked = new Date().toISOString();
         }
 
-        const level = status === 'SUCCESS' ? 'INFO' : (status === 'SKIPPED' ? 'WARN' : 'ERROR');
+        const level = status === 'SUCCESS' ? 'INFO' : 'WARN';
         this.record('CHANNEL_RESULT', {
             channel: channelKey,
             status,
@@ -2480,15 +2486,17 @@ class InsightXTelemetryEngine {
 
         let successCount = 0;
         let skippedCount = 0;
+        let sampleCount = 0;
         let html = '';
 
         MANDATORY_CHANNELS.forEach(c => {
             const ch = this.channels[c.id] || c;
             const isSuccess = ch.status === 'SUCCESS';
-            const isSkipped = ch.status === 'SKIPPED';
+            const isSkipped = ch.status === 'SKIPPED' || ch.status === 'EMPTY';
 
             if (isSuccess) successCount++;
             if (isSkipped) skippedCount++;
+            if (ch.status === 'SAMPLE') sampleCount++;
 
             const statusClass = isSuccess 
                 ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300' 
@@ -2496,7 +2504,7 @@ class InsightXTelemetryEngine {
                 ? 'bg-amber-500/10 border-amber-500/25 text-amber-300' 
                 : 'bg-white/5 border-white/10 text-slate-400';
 
-            const statusLabel = isSuccess ? '✅ 在线拉取' : (isSkipped ? '⚠️ 跳过(已存证)' : '待命中');
+            const statusLabel = {SUCCESS: '✅ 在线拉取', SAMPLE: '样例', EMPTY: '无可用条目', SKIPPED: '⚠️ 请求失败'}[ch.status] || '待命中';
 
             html += `
                 <div class="p-2.5 rounded-xl border border-white/5 bg-white/[0.02] flex items-start justify-between gap-2 transition-colors hover:bg-white/[0.04]">
@@ -2509,7 +2517,7 @@ class InsightXTelemetryEngine {
                             </div>
                             <p class="text-[9px] text-slate-400 mt-0.5 truncate">${ch.desc || ''}</p>
                             <p class="text-[8px] font-mono-code text-slate-500 mt-0.5 truncate">
-                                ${isSkipped ? `<span class="text-amber-400 font-sans font-bold">跳过原因: </span>${ch.reason}` : `产出 ${ch.count || 0} 条高价值原料`}
+                                ${isSuccess ? `产出 ${ch.count || 0} 条在线情报` : (ch.reason || '')}
                             </p>
                         </div>
                     </div>
@@ -2524,7 +2532,7 @@ class InsightXTelemetryEngine {
 
         grid.innerHTML = html;
         if (summary) {
-            summary.innerText = `9 端口并发检索 · ${successCount} 成功 / ${skippedCount} 跳过`;
+            summary.innerText = `${MANDATORY_CHANNELS.length} 个渠道 · ${successCount} 实时 / ${sampleCount} 样例 / ${skippedCount} 无结果或失败`;
         }
     }
 
@@ -2616,7 +2624,8 @@ function safeSanitizeCard(rawCard) {
     card.source = card.source || '全网权威雷达';
     card.sourcePlatform = card.sourcePlatform || 'web';
     card.sourceType = card.sourceType || 'article';
-    card.publishDate = card.publishDate || getTodayString();
+    card.id ??= card.url || card.title;
+    card.publishDate = card.publishDate || '';
     card.sector = card.sector || currentSector || '🔥 新模型速递';
 
     // 1. Tag Assignment
@@ -2642,82 +2651,14 @@ function safeSanitizeCard(rawCard) {
         }
     }
 
-    // 2. Model Specs Bento Box (for HuggingFace & Models)
-    if (card.sourcePlatform === 'huggingface' || card.sector === '🔥 新模型速递' || card.title.includes('模型') || card.title.includes('FastFrames') || card.title.includes('MoE')) {
-        if (!card.modelSpecs) {
-            let arch = '开源架构';
-            if (card.summary && card.summary.includes('safetensors')) arch = 'PyTorch / Safetensors';
-            if (card.summary && card.summary.includes('text-to-video')) arch = 'Video Diffusion / MoE';
-            if (card.title.includes('FastFrames')) arch = 'Apple FastFrames 架构';
-            if (card.title.includes('MoE') || card.title.includes('DeepSeek')) arch = '671B MoE (激活 37B)';
-            
-            card.modelSpecs = {
-                arch: arch,
-                context: '动态帧 / 128K',
-                license: '开源可商用',
-                benchmark: 'HF Trending Top 1'
-            };
-        }
-    }
-
-    // 3. High-Density Strategic Facts (Guarantee NO field is EVER undefined)
-    if (!card.monetization || card.monetization === 'undefined') {
-        if (card.sourcePlatform === 'huggingface' || card.title.includes('FastFrames')) {
-            card.monetization = `基于 ${card.originalTitle || card.title} 构建企业级专属私有化视频/图像生成中台，为广告营销与电商出海客户输出高毛利自动化内容生成服务。`;
-        } else if (card.sourcePlatform === 'github') {
-            card.monetization = `采用 Open-Core 商业模式：开源核心代码吸引极客与开发者生态流量，企业专有版交付多租户隔离、审计日志与合规专有部署。`;
-        } else if (card.sourcePlatform === 'hackernews' || card.sourcePlatform === 'devto') {
-            card.monetization = `捕捉硅谷一线 AI 架构演进趋势，提前布局新型 Agent 交互组件与轻量化微调技术中台，抢占出海先机。`;
-        } else if (card.sourcePlatform === 'ithome') {
-            card.monetization = `把握国内端侧 AI 硬件与芯片放量周期，将垂直大模型封装为软硬一体机解决方案向传统政企客户溢价交付。`;
-        } else if (card.sector === '💰 Token 经济学') {
-            card.monetization = `通过模型降价红利与分级路由架构，将高频低复杂请求转移至轻量端点，释放 70% 以上现金流预算。`;
-        } else {
-            card.monetization = `切入垂直细分市场需求，以标准化智能 Agent 替代传统繁琐人工外包，重构业务交付利润结构。`;
-        }
-    }
-
-    if (!card.roi || card.roi === 'undefined') {
-        if (card.sourcePlatform === 'huggingface' || card.title.includes('FastFrames')) {
-            card.roi = `相比全量依赖闭源商业视频/图像 API，本地化部署或蒸馏可削减 75% 长期运营算力成本。`;
-        } else if (card.sourcePlatform === 'github') {
-            card.roi = `研发周期由 3 个月压缩至 2 周，首年节省企业外包采购成本约 45 万元。`;
-        } else if (card.sourcePlatform === 'hackernews' || card.sourcePlatform === 'devto') {
-            card.roi = `前瞻性技术选型避免二次架构重构，预计为团队节省 6 个月试错研发折旧成本。`;
-        } else if (card.sourcePlatform === 'ithome') {
-            card.roi = `硬件一体机客单价提升 400%，企业私有化部署周期从 2 个月缩短至 3 天。`;
-        } else {
-            card.roi = `单客获客成本下降 38%，业务自动化全流程 ROI 预期可达 3.8 倍。`;
-        }
-    }
-
-    if (!card.useCase || card.useCase === 'undefined') {
-        if (card.sourcePlatform === 'huggingface' || card.title.includes('FastFrames')) {
-            card.useCase = `电商动态主图批量渲染、TikTok/Reels 跨境信息流广告镜头生成、游戏与动漫概念设计预演。`;
-        } else if (card.sourcePlatform === 'github') {
-            card.useCase = `自动化研发智能体、企业内部业务审批与工作流编排、跨系统海量数据自动清洗管线。`;
-        } else if (card.sourcePlatform === 'hackernews' || card.sourcePlatform === 'devto') {
-            card.useCase = `全自主编程智能体集成、多智能体协同攻防演练、低延迟流式语音对话交互。`;
-        } else if (card.sourcePlatform === 'ithome') {
-            card.useCase = `政企本地离线机房部署、工业边缘端实时视觉质检、医疗金融高合规数据不出域。`;
-        } else {
-            card.useCase = `智能客服全天候兜底、私域精准获客转化、电商长篇图文与评论批量分析。`;
-        }
-    }
-
-    if (!card.friction || card.friction === 'undefined') {
-        if (card.sourcePlatform === 'huggingface' || card.title.includes('FastFrames')) {
-            card.friction = `视频/大模型生成对 GPU 显存吞吐开销极大，生产落地建议配置 4090 或 A100 并开启 FlashAttention 加速。`;
-        } else if (card.sourcePlatform === 'github') {
-            card.friction = `开源项目处于快速迭代期，生产环境需锁定依赖版本并自建回归测试集。`;
-        } else {
-            card.friction = `团队对新工具链路存在学习曲线，需针对核心业务编写标准 SOP 并在前 2 周做人工复核。`;
-        }
-    }
-
-    if (!card.action || card.action === 'undefined') {
-        card.action = `产研团队本周应立即开展基准测试与成本测算，评估替代闭源模型或现有工具有效性。`;
-    }
+    card.modelSpecs = card.modelSpecs || card.model_specs;
+    card.tokenPricing = card.tokenPricing || card.token_pricing;
+    card.audioSnippet = card.audioSnippet || card.audio_snippet;
+    card.monetization = card.monetization || '来源未披露商业模式或定价。';
+    card.roi = card.roi || '来源未披露可核实的收益数据。';
+    card.useCase = card.useCase || card.use_case || '来源未披露落地场景。';
+    card.friction = card.friction || '来源未披露落地约束。';
+    card.action = card.action || '查看原始来源，核实关键事实。';
 
     return card;
 }
@@ -2756,8 +2697,8 @@ class OmnichannelIngestionEngine {
                         throw new Error(`HTTP ${res.status}`);
                     }
                 } catch (hfErr) {
-                    status = 'SUCCESS';
-                    reason = `在线请求响应超时，已平滑无感切入 HuggingFace 官方 2026 最新开源模型智库`;
+                    status = 'SAMPLE';
+                    reason = '在线请求失败，使用内置样例';
                     items = (CURATED_INTELLIGENCE['🔥 新模型速递'] || []).filter(c => c.sourcePlatform === 'huggingface' || c.priorityLevel === 'P0').slice(0, 3).map(safeSanitizeCard);
                 }
             } else if (channelId === 'hackernews') {
@@ -2770,7 +2711,9 @@ class OmnichannelIngestionEngine {
                     if (res.ok) {
                         const ids = await res.json();
                         const topIds = (ids || []).slice(0, 3);
-                        const storyPromises = topIds.map(id => fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json()).catch(() => null));
+                        const storyPromises = topIds.map(id => fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`, {
+                            signal: AbortSignal.timeout(4000)
+                        }).then(r => r.json()).catch(() => null));
                         const stories = (await Promise.all(storyPromises)).filter(Boolean);
                         items = stories.map(st => safeSanitizeCard({
                             id: `hn_${st.id}`,
@@ -2791,8 +2734,8 @@ class OmnichannelIngestionEngine {
                         throw new Error(`HTTP ${res.status}`);
                     }
                 } catch (hnErr) {
-                    status = 'SUCCESS';
-                    reason = `装载硅谷前沿技术领袖热议智库`;
+                    status = 'SAMPLE';
+                    reason = '在线请求失败，使用内置样例';
                     items = (CURATED_INTELLIGENCE['🔥 新模型速递'] || []).slice(0, 2).map(safeSanitizeCard);
                 }
             } else if (channelId === 'devto') {
@@ -2823,8 +2766,8 @@ class OmnichannelIngestionEngine {
                         throw new Error(`HTTP ${res.status}`);
                     }
                 } catch (devErr) {
-                    status = 'SUCCESS';
-                    reason = `装载国际开发者落地精选智库`;
+                    status = 'SAMPLE';
+                    reason = '在线请求失败，使用内置样例';
                     items = (CURATED_INTELLIGENCE['🌐 SaaS 商业化综合'] || []).slice(0, 2).map(safeSanitizeCard);
                 }
             } else if (channelId === 'ithome') {
@@ -2859,8 +2802,8 @@ class OmnichannelIngestionEngine {
                         throw new Error(`HTTP ${res.status}`);
                     }
                 } catch (itErr) {
-                    status = 'SUCCESS';
-                    reason = `装载 IT之家 官方国内算力与硬件落地快讯`;
+                    status = 'SAMPLE';
+                    reason = '在线请求失败，使用内置样例';
                     items = (CURATED_INTELLIGENCE['🔥 新模型速递'] || []).filter(c => c.sourcePlatform === 'ithome' || c.source.includes('IT之家')).slice(0, 2).map(safeSanitizeCard);
                 }
             } else if (channelId === 'lmsys') {
@@ -2901,8 +2844,8 @@ class OmnichannelIngestionEngine {
                         throw new Error(`HTTP ${res.status}`);
                     }
                 } catch (ghErr) {
-                    status = 'SUCCESS';
-                    reason = `API 频率限制，已优雅降级并装载 GitHub 爆火核心框架精选`;
+                    status = 'SAMPLE';
+                    reason = '在线请求失败，使用内置样例';
                     items = (CURATED_INTELLIGENCE['🔥 新模型速递'] || []).filter(c => c.sourcePlatform === 'github').slice(0, 2).map(safeSanitizeCard);
                 }
             } else if (channelId === 'podcast') {
@@ -2923,6 +2866,15 @@ class OmnichannelIngestionEngine {
             }
 
             if (!Array.isArray(items)) items = [];
+            if (['lmsys', 'pricing', 'podcast', 'community', '36kr'].includes(channelId)) {
+                status = 'SAMPLE';
+                reason = '使用内置样例，未连接实时来源';
+            }
+            if (!items.length) {
+                status = 'EMPTY';
+                reason = '未取得可用条目';
+            }
+            if (status === 'SAMPLE') items = items.map(card => ({...card, provenance: 'sample'}));
             const latencyMs = Math.round(performance.now() - startT);
             telemetry.updateChannel(channelId, status, latencyMs, items.length, reason);
             return items;
@@ -2935,32 +2887,41 @@ class OmnichannelIngestionEngine {
     }
 
     async fetchAllChannels(sector, isBackground = false) {
+        if (isBackground && this.lastSweep?.sector === sector && Date.now() - this.lastSweep.time < 45000) {
+            return this.unseenCards(this.lastSweep.cards);
+        }
         telemetry.record('OMNICHANNEL_SWEEP_START', {
             totalChannels: MANDATORY_CHANNELS.length,
             targetSector: sector,
             isBackground
         }, 'INFO', 'CHANNEL');
 
-        let backendItems = [];
-        try {
-            const controller = new AbortController();
-            const tid = setTimeout(() => controller.abort(), 1200);
-            const res = await fetch(`http://localhost:8000/api/omni-feed?sector=${encodeURIComponent(sector)}`, { signal: controller.signal });
-            clearTimeout(tid);
-            if (res.ok) {
-                const data = await res.json();
-                if (data && Array.isArray(data.items)) {
-                    backendItems = data.items;
-                    telemetry.record('BACKEND_OMNI_SYNC_SUCCESS', { count: backendItems.length }, 'INFO', 'CHANNEL');
+        const backendRequest = (async () => {
+            try {
+                const response = await fetch(`http://localhost:8000/api/omni-feed?sector=${encodeURIComponent(sector)}`, {
+                    signal: AbortSignal.timeout(15000)
+                });
+                if (response.ok) return await response.json();
+            } catch {
+                telemetry.record('BACKEND_OMNI_UNAVAILABLE', {sector}, 'WARN', 'CHANNEL');
+            }
+            return null;
+        })();
+        const localRequest = Promise.allSettled(MANDATORY_CHANNELS.map(ch => this.fetchSinglePort(ch.id, sector)));
+        const [backend, settled] = await Promise.all([backendRequest, localRequest]);
+        const backendItems = Array.isArray(backend?.items)
+            ? backend.items.filter(card => typeof card?.title === 'string' && card.title.trim()).map(safeSanitizeCard)
+            : [];
+        if (backend) {
+            telemetry.record('BACKEND_OMNI_SYNC_SUCCESS', {count: backendItems.length}, 'INFO', 'CHANNEL');
+            for (const channel of backend.telemetry?.channels || []) {
+                const local = telemetry.channels[channel.id];
+                if (local?.status !== 'SUCCESS' || channel.status === 'SUCCESS') {
+                    const reason = {SUCCESS: '后端在线采集', SAMPLE: '使用内置样例', EMPTY: '未取得可用条目', SKIPPED: '后端请求失败'}[channel.status];
+                    if (reason) telemetry.updateChannel(channel.id, channel.status, channel.latency_ms, channel.items_count, reason);
                 }
             }
-        } catch (beErr) {
-            // Backend offline; client continues seamlessly
         }
-
-        // Concurrent execution across ALL 9 channels via Promise.allSettled
-        const tasks = MANDATORY_CHANNELS.map(ch => this.fetchSinglePort(ch.id, sector));
-        const settled = await Promise.allSettled(tasks);
 
         const allItems = [...backendItems];
         settled.forEach(s => {
@@ -2971,19 +2932,26 @@ class OmnichannelIngestionEngine {
 
         // Importance & Gold-Density Re-ranking Engine (重要性排序与侧重)
         allItems.sort((a, b) => {
+            if ((a.provenance === 'sample') !== (b.provenance === 'sample')) return a.provenance === 'sample' ? 1 : -1;
             const priorityWeight = p => (p === 'P0' ? 100 : p === 'P1' ? 70 : 40);
             const score = item => {
                 let s = priorityWeight(item.priorityLevel);
                 if (item.sector === sector || (sector && item.sector && item.sector.slice(0, 2) === sector.slice(0, 2))) {
                     s += 40; // Sector focus bonus
                 }
-                if (item.publishDate === '2026-11-20') s += 25; // Today's freshness bonus
+                if (item.publishDate === getTodayString()) s += 25; // Today's freshness bonus
                 if (item.sourcePlatform === 'huggingface' || item.sourcePlatform === 'lmsys') s += 15; // Authority bonus
                 return s;
             };
             return score(b) - score(a);
         });
 
+        this.lastSweep = {sector, time: Date.now(), cards: allItems};
+        rememberMatrixCards(sector, allItems);
+        return this.unseenCards(allItems);
+    }
+
+    unseenCards(allItems) {
         // Deduplicate against seen history and current queue
         const currentQueueTitles = new Set(currentCards.map(c => c.title ? c.title.trim() : ''));
         const freshCandidates = [];
@@ -3015,11 +2983,17 @@ const MAX_QUEUE_CAPACITY = 20;
 const STARVATION_RECHARGE_TARGET = 8;
 
 let isGatekeeperActive = false;
+let pendingGateCards = [];
+let pendingGateSector = null;
 let isStarvationMode = false;
 let isBackgroundPrefetching = false;
 
 async function startGatekeeperIngestion(sector, isStarvation = false) {
-    if (isGenerating && !isStarvation) return;
+    if (isGenerating) return;
+    if (pendingGateSector !== sector) pendingGateCards = [];
+    pendingGateSector = sector;
+    const retry = document.getElementById('gatekeeper-retry');
+    retry.hidden = true;
     isGenerating = true;
     isGatekeeperActive = true;
     isStarvationMode = isStarvation;
@@ -3047,14 +3021,14 @@ async function startGatekeeperIngestion(sector, isStarvation = false) {
             badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> ⚠️ 队列已刷完 · 极速回充模式';
         }
         if (title) title.innerText = '情报队列已全部阅览！正在极速重填...';
-        if (subtitle) subtitle.innerText = '正在并发扫描全网 9 大端口并提炼下一批高价值决策卡片，集齐 8 张自动解锁！';
+        if (subtitle) subtitle.innerText = '正在扫描下一批情报，集齐 8 张自动解锁。';
     } else {
         telemetry.record('COLD_START_TRIGGERED', { targetBatch: INITIAL_BATCH_TARGET, sector }, 'INFO', 'QUEUE');
         if (badge) {
             badge.className = 'px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 flex items-center gap-1.5 font-bold';
             badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span> 首次启动 · 全端口搜索解析';
         }
-        if (title) title.innerText = '正在并发检索全网 9 大情报端口';
+        if (title) title.innerText = '正在并发检索已配置的情报源';
         if (subtitle) subtitle.innerText = '正在搜索与提炼高价值商业决策卡片，集齐满 8 张将自动解锁情报浏览流...';
     }
 
@@ -3072,15 +3046,19 @@ async function startGatekeeperIngestion(sector, isStarvation = false) {
     }
 
     if (liveTicker) {
-        liveTicker.innerText = '正在并发连接 9 大端口 (HuggingFace, LMSYS, 36Kr, IT之家, GitHub, 播客, 小红书, 微博, 定价雷达)...';
+        liveTicker.innerText = '正在并发连接情报源…';
     }
 
-    let collectedCards = [];
+    const collectedCards = [...pendingGateCards];
     if (!isStarvation) {
         currentCards = [];
     }
 
-    const candidates = await omnichannel.fetchAllChannels(sector);
+    const candidates = await omnichannel.fetchAllChannels(sector).catch(() => []);
+    if (pendingGateSector !== sector) {
+        isGenerating = false;
+        return startGatekeeperIngestion(currentSector);
+    }
 
     MANDATORY_CHANNELS.forEach(c => {
         const chip = document.getElementById(`chip-${c.id}`);
@@ -3097,7 +3075,7 @@ async function startGatekeeperIngestion(sector, isStarvation = false) {
     });
 
     for (const card of candidates) {
-        if (collectedCards.length < INITIAL_BATCH_TARGET) {
+        if (collectedCards.length < INITIAL_BATCH_TARGET && !collectedCards.some(item => item.title === card.title)) {
             collectedCards.push(card);
             const count = collectedCards.length;
             const pct = Math.round((count / INITIAL_BATCH_TARGET) * 100);
@@ -3116,8 +3094,8 @@ async function startGatekeeperIngestion(sector, isStarvation = false) {
         const master = CURATED_INTELLIGENCE[sector] || CURATED_INTELLIGENCE['🔥 新模型速递'] || [];
         for (const card of master) {
             if (collectedCards.length < INITIAL_BATCH_TARGET) {
-                if (!collectedCards.some(c => c.title === card.title)) {
-                    collectedCards.push(JSON.parse(JSON.stringify(card)));
+                if (!seenCardKeys.has(card.title) && !collectedCards.some(c => c.title === card.title)) {
+                    collectedCards.push({...card, provenance: 'sample'});
                     const count = collectedCards.length;
                     const pct = Math.round((count / INITIAL_BATCH_TARGET) * 100);
                     if (progressBar) progressBar.style.width = `${pct}%`;
@@ -3128,7 +3106,27 @@ async function startGatekeeperIngestion(sector, isStarvation = false) {
         }
     }
 
+    if (collectedCards.length < INITIAL_BATCH_TARGET) {
+        pendingGateCards = collectedCards;
+        currentCards = [];
+        renderCards(currentCards);
+        progressBar.style.width = Math.round(collectedCards.length * 100 / INITIAL_BATCH_TARGET) + '%';
+        percentText.innerText = progressBar.style.width;
+        counterText.innerText = collectedCards.length + ' / ' + INITIAL_BATCH_TARGET + ' 张卡片就绪';
+        liveTicker.innerText = '可用情报不足 8 张。可以重新扫描或切换赛道。';
+        telemetry.updateQueue(collectedCards.length, 'IDLE');
+        telemetry.record('GATEKEEPER_WAITING', {readyCount: collectedCards.length, sector}, 'WARN', 'QUEUE');
+        retry.hidden = false;
+        isGenerating = false;
+        return;
+    }
+    if (pendingGateSector !== sector) {
+        isGenerating = false;
+        return startGatekeeperIngestion(currentSector);
+    }
+    pendingGateCards = [];
     currentCards = collectedCards;
+    localStorage.setItem('insightx_last_sync_date', getTodayString());
     telemetry.updateQueue(currentCards.length, 'IDLE');
 
     if (liveTicker) {
@@ -3140,6 +3138,10 @@ async function startGatekeeperIngestion(sector, isStarvation = false) {
     }, 'INFO', 'QUEUE');
 
     await delay(300);
+    if (pendingGateSector !== sector) {
+        isGenerating = false;
+        return startGatekeeperIngestion(currentSector);
+    }
 
     if (panel) {
         panel.classList.remove('opacity-100', 'pointer-events-auto');
@@ -3163,6 +3165,7 @@ function refreshCards() {
 
 function renderCards(cards) {
     const container = document.getElementById('card-container');
+    if (activeAudio) activeAudio.pause();
     container.innerHTML = '';
     // Only render top 3 cards in the DOM to eliminate ghost stacking, reduce GPU load, and guarantee crisp visuals
     const visibleCards = cards.slice(0, 3);
@@ -3196,79 +3199,55 @@ function createCard(data, index, total) {
             <div class="bento-spec-grid">
                 <div class="bento-spec-item">
                     <span class="text-[9px] font-mono-code text-slate-500 uppercase tracking-wider">架构规格</span>
-                    <span class="text-[11px] font-bold text-white truncate">${data.modelSpecs.arch}</span>
+                    <span class="text-[11px] font-bold text-white truncate">${escapeHtml(data.modelSpecs.arch || '未披露')}</span>
                 </div>
                 <div class="bento-spec-item">
                     <span class="text-[9px] font-mono-code text-slate-500 uppercase tracking-wider">上下文长度</span>
-                    <span class="text-[11px] font-bold text-indigo-300 truncate">${data.modelSpecs.context}</span>
+                    <span class="text-[11px] font-bold text-indigo-300 truncate">${escapeHtml(data.modelSpecs.context || '未披露')}</span>
                 </div>
                 <div class="bento-spec-item">
                     <span class="text-[9px] font-mono-code text-slate-500 uppercase tracking-wider">商用协议</span>
-                    <span class="text-[11px] font-bold text-emerald-400 truncate">${data.modelSpecs.license}</span>
+                    <span class="text-[11px] font-bold text-emerald-400 truncate">${escapeHtml(data.modelSpecs.license || '未披露')}</span>
                 </div>
                 <div class="bento-spec-item">
                     <span class="text-[9px] font-mono-code text-slate-500 uppercase tracking-wider">跑分评测</span>
-                    <span class="text-[11px] font-bold text-amber-300 truncate">${data.modelSpecs.benchmark}</span>
+                    <span class="text-[11px] font-bold text-amber-300 truncate">${escapeHtml(data.modelSpecs.benchmark || '未披露')}</span>
                 </div>
             </div>
         `;
     }
 
     // Feature 2: Interactive ROI Slider (for Token Pricing Cards)
-    let roiSliderHTML = '';
-    if (data.tokenPricing || data.type === 'warning') {
-        const sliderId = `roi-slider-${data.id}`;
-        const outputId = `roi-output-${data.id}`;
-        roiSliderHTML = `
-            <div class="roi-interactive-box">
-                <div class="flex justify-between items-center text-[10px] font-bold mb-1">
-                    <span class="text-indigo-300 flex items-center gap-1">
-                        <i class="ph-fill ph-sliders"></i> 日均请求推演节省
-                    </span>
-                    <span class="font-mono-code text-emerald-400 font-bold" id="${outputId}">预计月省 ¥18,600 (降幅 82%)</span>
-                </div>
-                <input type="range" min="10" max="300" value="100" class="roi-range-slider" id="${sliderId}"
-                       oninput="updateRoiCalc(this.value, '${outputId}')">
-                <div class="flex justify-between text-[9px] font-mono-code text-slate-500">
-                    <span>10万次/日</span>
-                    <span>100万次/日 (默认)</span>
-                    <span>300万次/日</span>
-                </div>
+    const rates = comparableTokenRates(data.tokenPricing);
+    const roiSliderHTML = rates ? `
+        <div class="roi-interactive-box">
+            <div class="flex justify-between items-center text-[10px] font-bold mb-1">
+                <span class="text-indigo-300">Token 成本推演</span>
+                <span class="font-mono-code text-emerald-400" data-roi-result></span>
             </div>
-        `;
-    }
+            <input type="range" min="200000" max="5000000" step="100000" value="1000000" class="roi-range-slider"
+                   aria-label="日调用量（Token）">
+            <div class="flex justify-between text-[9px] text-slate-400"><span>20万 Token/日</span><span>500万 Token/日</span></div>
+        </div>
+    ` : data.tokenPricing ? '<p class="text-xs text-slate-400">缺少同币种、同口径的前后单价，暂无法测算。</p>' : '';
 
-    // Feature 3: Audio Snippet Waveform Player (for Audio / Podcast Cards)
-    let audioPillHTML = '';
-    if (data.audioSnippet) {
-        audioPillHTML = `
-            <div class="audio-snippet-box cursor-pointer" onclick="toggleAudioSnippet(this, event)">
-                <div class="flex justify-between items-center mb-1.5">
-                    <div class="flex items-center gap-2">
-                        <div class="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs">
-                            <i class="ph-fill ph-play play-icon"></i>
-                        </div>
-                        <span class="text-[11px] font-bold text-cyan-300">试听现场原声 (${data.audioSnippet.duration})</span>
-                    </div>
-                    <div class="soundwave-bars">
-                        <div class="soundwave-bar"></div>
-                        <div class="soundwave-bar"></div>
-                        <div class="soundwave-bar"></div>
-                        <div class="soundwave-bar"></div>
-                        <div class="soundwave-bar"></div>
-                        <div class="soundwave-bar"></div>
-                    </div>
-                </div>
-                <p class="text-[11px] text-slate-300 italic leading-relaxed pl-1 border-l-2 border-cyan-500/40">
-                    ${data.audioSnippet.quote}
-                </p>
-                <div class="text-[9px] font-mono-code text-slate-500 mt-1.5 flex justify-between">
-                    <span>${data.audioSnippet.speaker}</span>
-                    <span>时间戳锚点 ${data.audioSnippet.timestamp}</span>
-                </div>
-            </div>
-        `;
-    }
+    const snippet = data.audioSnippet;
+    const excerptSource = safeHttpUrl(snippet?.audioUrl || snippet?.audio_url);
+    const episodePage = safeHttpUrl(snippet?.episodeUrl || data.url);
+    const startSeconds = Math.max(0, Number(snippet?.startSeconds) || 0);
+    const durationSeconds = Number(snippet?.durationSeconds || parseFloat(snippet?.duration));
+    const mediaUrl = excerptSource ? new URL(excerptSource) : null;
+    if (mediaUrl && startSeconds) mediaUrl.hash = `t=${startSeconds}`;
+    const audioPillHTML = snippet ? `
+        <div class="audio-snippet-box">
+            <span class="text-[11px] font-bold text-cyan-300">${mediaUrl ? (durationSeconds > 0 ? '试听原声片段' : '播放节目音频') : (data.provenance === 'sample' ? '样例摘录 · 无可核验的音频' : '原声暂不可播放')}</span>
+            ${mediaUrl ? '<audio controls preload="none" class="w-full mt-1" aria-label="节目原声"></audio><p class="text-[10px]" data-audio-error hidden>音频加载失败，请尝试打开节目出处。</p>' : ''}
+            ${snippet.quote ? `<p class="text-[11px] text-slate-300 italic">${escapeHtml(snippet.quote)}</p>` : ''}
+            ${snippet.speaker ? `<p class="text-[10px] text-slate-400">${escapeHtml(snippet.speaker)}</p>` : ''}
+            ${snippet.timestamp ? `<p class="text-[10px] text-slate-400">时间戳 ${escapeHtml(snippet.timestamp)}</p>` : ''}
+            ${episodePage ? `<a class="text-xs text-cyan-300 underline" href="${escapeHtml(episodePage)}" target="_blank" rel="noopener noreferrer">打开节目出处</a>` : ''}
+        </div>
+    ` : '';
 
     cardEl.innerHTML = `
         <div class="stamp-badge like">SAVED</div>
@@ -3285,30 +3264,30 @@ function createCard(data, index, total) {
                     : `<span class="badge-p2 px-2 py-0.5 rounded-full text-[9px] font-bold font-mono-code flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>P2 行业观察</span>`}
                 
                 <!-- Tag -->
-                <span class="font-bold text-[10px] tracking-wider text-slate-300 ml-0.5">${data.tag || '前沿突破'}</span>
+                <span class="font-bold text-[10px] tracking-wider text-slate-300 ml-0.5">${escapeHtml(data.tag || '前沿突破')}</span>
                 
                 <!-- Omnichannel Platform Brand Badge -->
-                <span class="brand-badge brand-${data.sourcePlatform || 'chinese'}">${getBrandLabel(data.sourcePlatform)}</span>
+                <span class="brand-badge brand-${escapeHtml(data.sourcePlatform || 'chinese')}">${getBrandLabel(data.sourcePlatform)}</span>
             </div>
-            <span class="text-[10px] font-mono-code tracking-wider text-slate-400 font-bold">${data.heat || '匹配度 95%'}</span>
+            <span class="text-[10px] font-mono-code tracking-wider text-slate-400 font-bold">${escapeHtml(data.heat || '匹配度 95%')}</span>
         </div><!-- Title -->
-        <h2 class="text-base font-bold mb-1 leading-snug shrink-0 text-white" style="letter-spacing: -0.025em; line-height: 1.35;">${data.title}</h2>
-        ${data.originalTitle ? `<p class="text-[10px] text-slate-500 mb-2 shrink-0 truncate font-mono-code">${data.originalTitle}</p>` : '<div class="mb-2"></div>'}
+        <h2 class="text-base font-bold mb-1 leading-snug shrink-0 text-white" style="letter-spacing: -0.025em; line-height: 1.35;">${data.provenance === 'sample' ? '[样例] ' : ''}${escapeHtml(data.title)}</h2>
+        ${data.originalTitle ? `<p class="text-[10px] text-slate-500 mb-2 shrink-0 truncate font-mono-code">${escapeHtml(data.originalTitle)}</p>` : '<div class="mb-2"></div>'}
 
         <!-- Source pill & Publish Date & Original URL Link -->
         <div class="flex items-center justify-between mb-2.5 shrink-0 text-[10px] font-mono-code border-b border-white/5 pb-2">
             <div class="flex items-center gap-1.5 text-slate-400 truncate max-w-[200px]">
                 <i class="ph ph-newspaper text-slate-500"></i>
-                <span class="truncate">${data.source}</span>
+                <span class="truncate">${escapeHtml(data.source)}</span>
             </div>
             <div class="flex items-center gap-2 shrink-0">
                 <span class="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-bold flex items-center gap-1">
-                    <i class="ph-bold ph-calendar-blank text-indigo-400"></i> ${data.publishDate || '2026-11-20'}
+                    <i class="ph-bold ph-calendar-blank text-indigo-400"></i> ${escapeHtml(data.publishDate || '发布日期未披露')}
                 </span>
-                ${data.url ? `
-                <a href="${data.url}" target="_blank" rel="noopener noreferrer" 
+                ${safeHttpUrl(data.url) ? `
+                <a href="${escapeHtml(safeHttpUrl(data.url))}" target="_blank" rel="noopener noreferrer"
                    onclick="event.stopPropagation()"
-                   title="直接访问官方原文链接"
+                   title="直接打开原文链接"
                    class="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-indigo-600 hover:text-white border border-white/10 hover:border-indigo-400 text-slate-300 text-[10px] font-bold flex items-center gap-1 transition-all group">
                     <span>原文</span>
                     <i class="ph-bold ph-arrow-square-out text-slate-400 group-hover:text-white"></i>
@@ -3326,90 +3305,113 @@ function createCard(data, index, total) {
             ${data.summary ? `
             <div class="p-3 rounded-xl border border-white/5 bg-white/[0.02] flex flex-col gap-1">
                 <span class="text-[9px] uppercase font-bold font-mono-code text-slate-500 tracking-wider">📄 核心事实提炼</span>
-                <p class="text-[11px] leading-relaxed text-slate-300">${data.summary}</p>
+                <p class="text-[11px] leading-relaxed text-slate-300">${escapeHtml(data.summary)}</p>
             </div>` : ''}
 
             <div class="p-3 rounded-xl border border-white/5 bg-white/[0.02] flex flex-col gap-1">
                 <span class="text-[9px] uppercase font-bold font-mono-code text-slate-500 tracking-wider">💰 商业变现与定价</span>
-                <p class="text-[11px] leading-relaxed text-slate-300">${data.monetization || '切入垂直细分市场需求，以标准化智能 Agent 替代传统繁琐人工外包，重构业务交付利润结构。'}</p>
-                <p class="text-[11px] font-bold text-emerald-400 mt-0.5">${data.roi || '单客获客成本下降 38%，业务自动化全流程 ROI 预期可达 3.8 倍。'}</p>
+                <p class="text-[11px] leading-relaxed text-slate-300">${escapeHtml(data.monetization || '切入垂直细分市场需求，以标准化智能 Agent 替代传统繁琐人工外包，重构业务交付利润结构。')}</p>
+                <p class="text-[11px] font-bold text-emerald-400 mt-0.5">${escapeHtml(data.roi || '单客获客成本下降 38%，业务自动化全流程 ROI 预期可达 3.8 倍。')}</p>
             </div>
 
             <div class="p-3 rounded-xl border border-white/5 bg-white/[0.02] flex flex-col gap-1">
                 <span class="text-[9px] uppercase font-bold font-mono-code text-slate-500 tracking-wider">🎯 落地场景与风险阻碍</span>
-                <p class="text-[11px] leading-relaxed text-slate-300">${data.useCase || '智能客服全天候兜底、私域精准获客转化、电商长篇图文与评论批量分析。'}</p>
-                <p class="text-[11px] text-amber-400 mt-0.5">${data.friction || '团队对新工具链路存在学习曲线，需针对核心业务编写标准 SOP 并在前 2 周做人工复核。'}</p>
+                <p class="text-[11px] leading-relaxed text-slate-300">${escapeHtml(data.useCase || '智能客服全天候兜底、私域精准获客转化、电商长篇图文与评论批量分析。')}</p>
+                <p class="text-[11px] text-amber-400 mt-0.5">${escapeHtml(data.friction || '团队对新工具链路存在学习曲线，需针对核心业务编写标准 SOP 并在前 2 周做人工复核。')}</p>
             </div>
 
             <div class="p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.05]">
                 <span class="font-bold block mb-1 text-[9px] text-indigo-400 uppercase font-mono-code flex items-center gap-1">
                     <i class="ph-fill ph-crosshair"></i> 商业战略行动建议
                 </span>
-                <p class="text-[11px] leading-relaxed text-indigo-200/90">${data.action || '产研团队本周应立即开展基准测试与成本测算，评估替代闭源模型或现有工具有效性。'}</p>
+                <p class="text-[11px] leading-relaxed text-indigo-200/90">${escapeHtml(data.action || '产研团队本周应立即开展基准测试与成本测算，评估替代闭源模型或现有工具有效性。')}</p>
             </div>
         </div>
 
         <!-- Bottom Action CTA -->
         <button class="w-full mt-2.5 shrink-0 font-bold py-2.5 rounded-xl flex justify-center items-center gap-2 transition-all bg-indigo-500 text-white hover:bg-indigo-600 active:scale-[0.98] shadow-[0_4px_20px_rgba(99,102,241,0.3)]"
-                onclick="openSourceModal('${escapeStr(data.title)}', '${data.sourceType}', '${escapeStr(data.summary)}', '${escapeStr(data.url || '')}', '${escapeStr(data.source || '')}', '${data.publishDate || '2026-11-20'}')">
+                onclick="openSourceModal('${escapeStr(data.title)}', '${escapeStr(data.sourceType)}', '${escapeStr(data.summary)}', '${escapeStr(data.url || '')}', '${escapeStr(data.source || '')}', '${escapeHtml(data.publishDate || '2026-11-20')}')">
             <i class="ph-fill ph-file-text text-sm"></i>
             <span class="text-xs tracking-wide">查看深度拆解与完整出处</span>
         </button>
     `;
 
     document.getElementById('card-container').appendChild(cardEl);
+    if (rates) {
+        const slider = cardEl.querySelector('.roi-range-slider');
+        const output = cardEl.querySelector('[data-roi-result]');
+        const renderEstimate = () => updateRoiCalc(Number(slider.value), output, rates);
+        slider.addEventListener('input', renderEstimate);
+        renderEstimate();
+    }
+    if (mediaUrl) {
+        const player = cardEl.querySelector('audio');
+        player.src = mediaUrl.href;
+        player.addEventListener('play', () => {
+            if (activeAudio && activeAudio !== player) activeAudio.pause();
+            activeAudio = player;
+            if (durationSeconds > 0 && player.currentTime >= startSeconds + durationSeconds) player.currentTime = startSeconds;
+        });
+        player.addEventListener('pause', () => {
+            if (activeAudio === player) activeAudio = null;
+        });
+        player.addEventListener('ended', () => {
+            if (activeAudio === player) activeAudio = null;
+        });
+        player.addEventListener('timeupdate', () => {
+            if (durationSeconds > 0 && player.currentTime >= startSeconds + durationSeconds) player.pause();
+        });
+        player.addEventListener('error', () => {
+            cardEl.querySelector('[data-audio-error]').hidden = false;
+        });
+    }
     if (index === 0) makeCardDraggable(cardEl, data);
 }
 
 function escapeStr(s) {
-    return (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
+    return escapeHtml(String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/[\r\n\u2028\u2029]/g, ' '));
 }
 
 // ── Interactive ROI Calculator ─────────────────────────────────
-function updateRoiCalc(val, outputId) {
-    const el = document.getElementById(outputId);
-    if (!el) return;
-    const factor = parseInt(val) / 100;
-    const baseSavings = 18600;
-    const savings = Math.round(baseSavings * factor);
-    el.innerText = `预计月省 ¥${savings.toLocaleString()} (降幅 82%)`;
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
 }
 
-// ── Interactive Audio Snippet Player ───────────────────────────
-function toggleAudioSnippet(box, event) {
-    event.stopPropagation();
-    const playIcon = box.querySelector('.play-icon');
-    const bars     = box.querySelectorAll('.soundwave-bar');
-
-    if (activeAudioPill === box) {
-        // Pause
-        bars.forEach(b => b.classList.remove('playing'));
-        playIcon.className = 'ph-fill ph-play play-icon';
-        activeAudioPill = null;
-        if (audioTimer) clearInterval(audioTimer);
-    } else {
-        // Stop any previous
-        if (activeAudioPill) {
-            activeAudioPill.querySelectorAll('.soundwave-bar').forEach(b => b.classList.remove('playing'));
-            const prevIcon = activeAudioPill.querySelector('.play-icon');
-            if (prevIcon) prevIcon.className = 'ph-fill ph-play play-icon';
-        }
-
-        // Start playing
-        bars.forEach(b => b.classList.add('playing'));
-        playIcon.className = 'ph-fill ph-pause play-icon';
-        activeAudioPill = box;
-
-        // Auto stop after 30s
-        if (audioTimer) clearInterval(audioTimer);
-        audioTimer = setTimeout(() => {
-            if (activeAudioPill === box) {
-                bars.forEach(b => b.classList.remove('playing'));
-                playIcon.className = 'ph-fill ph-play play-icon';
-                activeAudioPill = null;
-            }
-        }, 30000);
+function safeHttpUrl(value) {
+    try {
+        const url = new URL(value);
+        return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
+    } catch {
+        return null;
     }
+}
+
+function comparableTokenRates(price) {
+    if (!price) return null;
+    const {currentPerMillion, previousPerMillion, currency} = price;
+    if (Number.isFinite(currentPerMillion) && Number.isFinite(previousPerMillion) &&
+        currentPerMillion >= 0 && previousPerMillion > 0 && ['USD', 'CNY'].includes(currency)) {
+        return {current: currentPerMillion, previous: previousPerMillion, currency};
+    }
+    // Older cards store a single rate and may omit the previous rate's unit.
+    const pattern = /^(?:缓存命中|未命中|加权成本|单一模型)?\s*([¥￥$])\s*(\d+(?:\.\d+)?)\s*(?:\/\s*(千|百万|M)\s*(?:tokens?)?)?$/i;
+    const current = typeof price.unitPrice === 'string' && price.unitPrice.match(pattern);
+    const previous = typeof price.prevPrice === 'string' && price.prevPrice.match(pattern);
+    if (!current?.[3] || !previous || current[1].replace('￥', '¥') !== previous[1].replace('￥', '¥') || Number(previous[2]) <= 0) return null;
+    return {
+        current: Number(current[2]) * (current[3] === '千' ? 1000 : 1),
+        previous: Number(previous[2]) * ((previous[3] || current[3]) === '千' ? 1000 : 1),
+        currency: current[1] === '$' ? 'USD' : 'CNY'
+    };
+}
+
+function updateRoiCalc(dailyTokens, output, {current, previous, currency}) {
+    const monthly = (previous - current) * dailyTokens * 30 / 1_000_000;
+    const money = new Intl.NumberFormat('zh-CN', {style: 'currency', currency, maximumFractionDigits: 2});
+    const reduction = Math.abs((previous - current) / previous * 100).toFixed(1);
+    output.innerText = `${dailyTokens.toLocaleString()} Token/日 · 月${monthly < 0 ? '增' : '省'} ${money.format(Math.abs(monthly))} · ${monthly < 0 ? '涨' : '降'}幅 ${reduction}%`;
 }
 
 // ── Touch & Drag Physics (Tinder Triage) ─────────────────────────
@@ -3552,6 +3554,7 @@ function recordSeenCard(card) {
 
 function advanceCardStack(swipeAction = 'DISCARD', cardData = null) {
     setTimeout(async () => {
+        if (cardData && currentCards[0]?.title !== cardData.title) return;
         const swiped = currentCards.shift();
         if (swiped) {
             recordSeenCard(swiped);
@@ -3601,6 +3604,7 @@ async function triggerBackgroundPrefetch(sector) {
 
     try {
         const newCandidates = await omnichannel.fetchAllChannels(sector, true /* isBackground */);
+        if (sector !== currentSector || isGatekeeperActive) return;
         let addedCount = 0;
 
         for (const card of newCandidates) {
@@ -3762,13 +3766,13 @@ function renderLibrary() {
     empty.classList.add('hidden');
     list.innerHTML = savedItems.map(item => `
         <div class="p-3.5 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all cursor-pointer"
-             onclick="openSourceModal('${escapeStr(item.title)}', '${item.sourceType}', '${escapeStr(item.summary)}', '${escapeStr(item.url || '')}', '${escapeStr(item.source || '')}', '${item.publishDate || '2026-11-20'}')">
+             onclick="openSourceModal('${escapeStr(item.title)}', '${escapeStr(item.sourceType)}', '${escapeStr(item.summary)}', '${escapeStr(item.url || '')}', '${escapeStr(item.source || '')}', '${escapeStr(item.publishDate || '')}')">
             <div class="flex justify-between items-center mb-1.5">
-                <span class="text-[10px] font-bold text-indigo-400 tracking-wide">${item.tag}</span>
-                <span class="text-[9px] font-mono-code text-slate-500">${item.source}</span>
+                <span class="text-[10px] font-bold text-indigo-400 tracking-wide">${escapeHtml(item.tag)}</span>
+                <span class="text-[9px] font-mono-code text-slate-500">${escapeHtml(item.source)}</span>
             </div>
-            <div class="text-xs font-bold text-white line-clamp-2 leading-snug mb-1">${item.title}</div>
-            <div class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">${item.summary}</div>
+            <div class="text-xs font-bold text-white line-clamp-2 leading-snug mb-1">${escapeHtml(item.title)}</div>
+            <div class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">${escapeHtml(item.summary)}</div>
         </div>
     `).join('');
 }
@@ -3783,13 +3787,13 @@ function filterLibrary(type, btn) {
     const filtered = (type === 'all') ? savedItems : savedItems.filter(i => i.type === type);
     list.innerHTML = filtered.map(item => `
         <div class="p-3.5 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all cursor-pointer"
-             onclick="openSourceModal('${escapeStr(item.title)}', '${item.sourceType}', '${escapeStr(item.summary)}', '${escapeStr(item.url || '')}', '${escapeStr(item.source || '')}', '${item.publishDate || '2026-11-20'}')">
+             onclick="openSourceModal('${escapeStr(item.title)}', '${escapeStr(item.sourceType)}', '${escapeStr(item.summary)}', '${escapeStr(item.url || '')}', '${escapeStr(item.source || '')}', '${escapeStr(item.publishDate || '')}')">
             <div class="flex justify-between items-center mb-1.5">
-                <span class="text-[10px] font-bold text-indigo-400 tracking-wide">${item.tag}</span>
-                <span class="text-[9px] font-mono-code text-slate-500">${item.source}</span>
+                <span class="text-[10px] font-bold text-indigo-400 tracking-wide">${escapeHtml(item.tag)}</span>
+                <span class="text-[9px] font-mono-code text-slate-500">${escapeHtml(item.source)}</span>
             </div>
-            <div class="text-xs font-bold text-white line-clamp-2 leading-snug mb-1">${item.title}</div>
-            <div class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">${item.summary}</div>
+            <div class="text-xs font-bold text-white line-clamp-2 leading-snug mb-1">${escapeHtml(item.title)}</div>
+            <div class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">${escapeHtml(item.summary)}</div>
         </div>
     `).join('');
 }
@@ -3800,7 +3804,7 @@ function exportLibraryMarkdown() {
         return;
     }
     const md = savedItems.map((item, idx) => `
-### ${idx+1}. ${item.title}
+### ${idx+1}. ${item.provenance === 'sample' ? '[样例] ' : ''}${item.title}
 - **标签**: ${item.tag} | 来源: ${item.source}
 - **商业模式/定价**: ${item.monetization}
 - **ROI 效能**: ${item.roi}
@@ -3817,33 +3821,43 @@ function exportLibraryMarkdown() {
 }
 
 // ── Matrix Radar (Macro Strategic Landscape - Always Active) ──
+const matrixCardsBySector = new Map();
+
+function rememberMatrixCards(sector, cards) {
+    const byTitle = new Map();
+    for (const card of cards) {
+        if (card.provenance !== 'sample' && !byTitle.has(card.title)) byTitle.set(card.title, card);
+        if (byTitle.size === 60) break;
+    }
+    if (byTitle.size) matrixCardsBySector.set(sector, Array.from(byTitle.values()));
+    if (sector === currentSector && document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
+}
+
 function renderMatrixView() {
     const area = document.getElementById('matrix-nodes-area');
     
-    // Collect all intelligence cards across current sector or full database
-    let allNodes = [];
-    if (CURATED_INTELLIGENCE[currentSector]) {
-        allNodes = [...CURATED_INTELLIGENCE[currentSector]];
-    }
-    // If fewer than 5 nodes, blend in top items from other sectors for macro view
-    if (allNodes.length < 5) {
-        Object.keys(CURATED_INTELLIGENCE).forEach(k => {
-            if (k !== currentSector) {
-                allNodes.push(...CURATED_INTELLIGENCE[k].slice(0, 2));
-            }
-        });
-    }
+    const liveCards = matrixCardsBySector.get(currentSector);
+    const allNodes = liveCards?.length ? liveCards : (CURATED_INTELLIGENCE[currentSector] || []).map(card => ({
+        ...card, provenance: 'sample'
+    }));
 
-    document.getElementById('matrix-count').innerText = `${allNodes.length} 核心态势节点`;
+    const hasScores = card => Number.isFinite(card.matrixX) && Number.isFinite(card.matrixY);
+    const unscored = allNodes.filter(card => !hasScores(card)).length;
+    const count = document.getElementById('matrix-count');
+    count.innerText = `${allNodes.length} 节点${unscored ? ` · ${unscored} 待评分` : ''}`;
     area.querySelectorAll('.matrix-node').forEach(n => n.remove());
 
     allNodes.forEach((card, idx) => {
         // Use predefined coordinates or hash-based dispersion
-        const x = card.matrixX || (20 + ((card.id * 37) % 65));
-        const y = card.matrixY || (25 + ((card.id * 53) % 60));
+        const x = card.matrixX ?? (20 + ((idx * 37) % 65));
+        const y = card.matrixY ?? (25 + ((idx * 53) % 60));
 
         const node = document.createElement('div');
         node.className = 'matrix-node absolute cursor-pointer';
+        if (!hasScores(card)) {
+            node.style.opacity = '0.55';
+            node.title = `${card.title}（待评分，位置仅用于浏览）`;
+        }
         node.style.left = `${x}%`;
         node.style.top  = `${100 - y}%`; // Invert Y so high value is on top
         node.style.setProperty('--node-color', card.type === 'warning' ? '#F59E0B' : card.type === 'opportunity' ? '#10B981' : '#6366F1');
@@ -3851,7 +3865,7 @@ function renderMatrixView() {
         node.innerHTML = `
             <div class="matrix-node-core"></div>
             <span class="absolute top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-mono-code font-bold text-slate-200 bg-black/85 px-1.5 py-0.5 rounded border border-white/10 pointer-events-none shadow-lg">
-                ${card.title.slice(0, 9)}...
+                ${card.provenance === 'sample' ? '[样例] ' : ''}${escapeHtml(card.title.slice(0, 9))}...
             </span>
         `;
 
@@ -3859,7 +3873,7 @@ function renderMatrixView() {
             area.querySelectorAll('.matrix-node').forEach(n => n.classList.remove('active'));
             node.classList.add('active');
             document.getElementById('matrix-detail-title').innerText = card.title;
-            document.getElementById('matrix-detail-desc').innerText = `【ROI/收益】${card.roi}
+            document.getElementById('matrix-detail-desc').innerText = `${hasScores(card) ? '' : '该情报尚未评分。\n'}【ROI/收益】${card.roi}
 【落地场景】${card.useCase}
 【商业建议】${card.action}`;
             document.getElementById('matrix-detail-dot').style.backgroundColor = node.style.getPropertyValue('--node-color');
@@ -3872,7 +3886,7 @@ function renderMatrixView() {
     if (allNodes.length > 0) {
         const first = allNodes[0];
         document.getElementById('matrix-detail-title').innerText = first.title;
-        document.getElementById('matrix-detail-desc').innerText = `【ROI/收益】${first.roi}
+        document.getElementById('matrix-detail-desc').innerText = `${hasScores(first) ? '' : '该情报尚未评分。\n'}【ROI/收益】${first.roi}
 【落地场景】${first.useCase}
 【商业建议】${first.action}`;
         document.getElementById('matrix-detail-dot').style.backgroundColor = first.type === 'warning' ? '#F59E0B' : first.type === 'opportunity' ? '#10B981' : '#6366F1';
@@ -3881,6 +3895,7 @@ function renderMatrixView() {
 
 // ── Source Modal ───────────────────────────────────────────────
 function openSourceModal(title, type, summary, url, source, publishDate) {
+    url = safeHttpUrl(url);
     const modal = document.getElementById('modal-source');
     document.getElementById('source-title').innerText = title;
     
@@ -3897,25 +3912,25 @@ function openSourceModal(title, type, summary, url, source, publishDate) {
                 <div class="flex flex-col gap-1 min-w-0">
                     <div class="flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span class="text-[10px] font-mono-code text-indigo-300 uppercase tracking-wider font-bold">官方权威信源出处 · 已核验</span>
+                        <span class="text-[10px] font-mono-code text-indigo-300 uppercase tracking-wider font-bold">原始来源</span>
                     </div>
                     <div class="text-xs font-bold text-white truncate max-w-sm">
-                        ${source || '权威技术信源'}
+                        ${escapeHtml(source || '来源未披露')}
                     </div>
                     <div class="text-[10px] font-mono-code text-slate-400 flex items-center gap-1.5">
-                        <i class="ph ph-calendar-blank text-indigo-400"></i> 发布日期: <span class="text-slate-200 font-bold">${publishDate || '2026-11-20'}</span>
+                        <i class="ph ph-calendar-blank text-indigo-400"></i> 发布日期: <span class="text-slate-200 font-bold">${escapeHtml(publishDate || '未披露')}</span>
                         ${domain ? `<span>·</span><span>${domain}</span>` : ''}
                     </div>
                 </div>
 
                 ${url ? `
-                <a href="${url}" target="_blank" rel="noopener noreferrer" 
+                <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer"
                    class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold text-xs flex items-center gap-2 shadow-[0_4px_16px_rgba(99,102,241,0.4)] transition-all shrink-0">
-                    <span>访问官方原文链接</span>
+                    <span>打开原文链接</span>
                     <i class="ph-bold ph-arrow-square-out text-sm"></i>
                 </a>
                 ` : `
-                <span class="text-xs text-slate-500 font-mono-code">官方闭门纪要 / 无公开外链</span>
+                <span class="text-xs text-slate-500 font-mono-code">暂无可用的原文链接</span>
                 `}
             </div>
 
@@ -3924,21 +3939,20 @@ function openSourceModal(title, type, summary, url, source, publishDate) {
                 <span class="flex items-center gap-2 text-indigo-300">
                     <i class="ph-fill ph-shield-check text-base text-indigo-400"></i> InsightX 商业情报降噪引擎
                 </span>
-                <span class="text-[10px] font-mono-code text-slate-500">已剔除公关通稿与营销水分</span>
             </div>
 
             <!-- Article Title -->
-            <h1 class="text-lg font-bold text-white tracking-tight leading-snug">${title}</h1>
+            <h1 class="text-lg font-bold text-white tracking-tight leading-snug">${escapeHtml(title)}</h1>
 
             <!-- Summary Body -->
-            <div class="text-xs text-slate-300 leading-relaxed whitespace-pre-line bg-white/[0.01] p-4 rounded-xl border border-white/5">${summary}</div>
+            <div class="text-xs text-slate-300 leading-relaxed whitespace-pre-line bg-white/[0.01] p-4 rounded-xl border border-white/5">${escapeHtml(summary)}</div>
 
             <!-- Direct Raw URL Display Box -->
             ${url ? `
             <div class="p-3 rounded-xl bg-[#08090D] border border-white/10 flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2 truncate min-w-0">
                     <i class="ph ph-link-simple text-slate-500 text-sm"></i>
-                    <span class="text-[11px] font-mono-code text-slate-400 truncate select-all">${url}</span>
+                    <span class="text-[11px] font-mono-code text-slate-400 truncate select-all">${escapeHtml(url)}</span>
                 </div>
                 <button type="button" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-mono-code shrink-0 border border-white/10"
                         onclick="navigator.clipboard.writeText('${escapeStr(url)}'); alert('原文链接已复制到剪贴板！');">
@@ -3950,7 +3964,7 @@ function openSourceModal(title, type, summary, url, source, publishDate) {
             <!-- Verification Methodology -->
             <div class="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-xs text-slate-400 leading-relaxed">
                 <span class="text-white font-bold block mb-1">溯源核验机制：</span>
-                所有引用的 ROI 效能数据及核心定价数字均已校验原文出处，若原文未包含实测依据，系统已标注“未提及”，杜绝大模型盲目脑补。
+                请以原始发布中的定价、适用范围和实测数据为准。
             </div>
         </div>
     `;
@@ -4118,6 +4132,7 @@ async function testApiConnection() {
             const endpoint = cleanBase.endsWith('/messages') ? cleanBase : `${cleanBase}/messages`;
             resp = await fetch(endpoint, {
                 method: 'POST',
+                signal: AbortSignal.timeout(20000),
                 headers: {
                     'Content-Type': 'application/json',
                     'x-api-key': apiKey,
@@ -4135,14 +4150,16 @@ async function testApiConnection() {
             const endpoint = cleanBase.endsWith('/chat/completions') ? cleanBase : `${cleanBase}/chat/completions`;
             resp = await fetch(endpoint, {
                 method: 'POST',
+                signal: AbortSignal.timeout(20000),
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
                     model: model,
-                    messages: [{ role: 'user', content: 'Ping' }],
-                    max_tokens: 16,
+                    ...(new URL(endpoint).hostname === 'api.deepseek.com' ? {thinking: {type: 'disabled'}} : {}),
+                    messages: [{ role: 'user', content: 'Reply with OK.' }],
+                    max_tokens: 256,
                     temperature: 0.1
                 })
             });
@@ -4150,19 +4167,23 @@ async function testApiConnection() {
 
         const elapsed = Date.now() - startTime;
         if (resp.ok) {
+            const reply = await resp.json();
+            const content = proto === 'anthropic'
+                ? reply.content?.map(block => block.text || '').join('')
+                : reply.choices?.[0]?.message?.content;
+            if (typeof content !== 'string' || !content.trim()) throw new Error('模型未返回有效正文');
             dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
             text.className = 'text-[11px] font-mono-code text-emerald-400 font-bold';
             text.innerText = `✅ 连接正常！(${elapsed}ms)`;
         } else {
-            const err = await resp.text();
             dot.className = 'w-2 h-2 rounded-full bg-rose-500';
             text.className = 'text-[11px] font-mono-code text-rose-400';
-            text.innerText = `❌ HTTP ${resp.status}: ${err.slice(0, 40)}...`;
+            text.innerText = `❌ HTTP ${resp.status}`;
         }
     } catch(e) {
         dot.className = 'w-2 h-2 rounded-full bg-rose-500';
         text.className = 'text-[11px] font-mono-code text-rose-400';
-        text.innerText = `❌ 网络/CORS错误: ${e.message.slice(0, 30)}`;
+        text.innerText = `❌ ${e.message.slice(0, 50)}`;
     } finally {
         btn.disabled = false;
     }

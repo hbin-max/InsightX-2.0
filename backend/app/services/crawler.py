@@ -3,22 +3,17 @@ import time
 from typing import List, Dict, Any
 from app.services.new_model_monitor import (
     fetch_huggingface_trending_models,
-    fetch_lmsys_arena_leaderboard,
-    get_all_new_model_intelligence
+    fetch_lmsys_arena_leaderboard
 )
 from app.services.pricing_diff_radar import get_official_pricing_diffs
-from app.services.podcast_pipeline import get_all_podcast_intelligence
+from app.services.podcast_pipeline import fetch_configured_podcast, get_all_podcast_intelligence
 from app.services.domestic_crawler import (
     fetch_36kr_ai_news,
     fetch_ithome_ai_news,
-    fetch_xhs_and_douyin_bridge,
-    fetch_weibo_ai_hot,
-    crawl_domestic_all
+    fetch_xhs_and_douyin_bridge
 )
 from app.services.international_crawler import (
-    fetch_github_trending_ai,
-    fetch_x_thought_leaders,
-    crawl_international_all
+    fetch_ai_project_releases, fetch_devto_ai, fetch_github_trending_ai, fetch_hackernews_ai
 )
 from app.services.priority_engine import sort_by_priority
 
@@ -43,7 +38,8 @@ CHANNEL_METADATA = {
     "pricing":     {"name": "Token 定价变动雷达", "icon": "💰", "category": "pricing"},
     "lmsys":       {"name": "LMSYS Arena 天梯",  "icon": "🏆", "category": "benchmark"},
     "github":      {"name": "GitHub Trending",   "icon": "🐙", "category": "code"},
-    "podcast":     {"name": "小宇宙与播客原声",   "icon": "📻", "category": "audio"},
+    "releases":    {"name": "AI 开源项目官方发布", "icon": "📦", "category": "code"},
+    "podcast":     {"name": "公开播客 RSS", "icon": "📻", "category": "audio"},
     "community":   {"name": "小红书与抖音实操",   "icon": "📕", "category": "social"},
     "36kr":        {"name": "36氪 商业创投",      "icon": "📰", "category": "domestic"}
 }
@@ -54,13 +50,12 @@ async def fetch_single_channel_safe(channel_key: str, sector: str = "all") -> Di
     Guarantees no channel crashes the pipeline. If a channel fails, it logs the reason and marks SKIPPED.
     """
     start_t = time.perf_counter()
-    status = "SUCCESS"
-    reason = "OK"
+    sample = channel_key in {"lmsys", "pricing", "community"}
     items = []
 
     try:
         if channel_key == "huggingface":
-            items = fetch_huggingface_trending_models()
+            items = await asyncio.to_thread(fetch_huggingface_trending_models)
             for x in items:
                 x["sector"] = x.get("sector") or "🔥 新模型速递"
                 x["sourcePlatform"] = "huggingface"
@@ -84,34 +79,13 @@ async def fetch_single_channel_safe(channel_key: str, sector: str = "all") -> Di
                 x["sourcePlatform"] = "ithome"
 
         elif channel_key == "hackernews":
-            items = [
-                {
-                    "title": "🔶 YC HackerNews 头条: 为什么企业正集体从闭源向私有化 MoE 迁移",
-                    "originalTitle": "Why Enterprises Are Moving from Closed LLMs to Self-Hosted MoE",
-                    "summary": "硅谷顶级极客热议文章：从数据合规、冷启动延迟与长文本计费三个角度，深入复盘了 12 家 B2B SaaS 独角兽将 85% 流量切向开源权重后的财务模型与降本表现。",
-                    "source": "Hacker News · 硅谷极客圈",
-                    "sourcePlatform": "hackernews",
-                    "sourceType": "article",
-                    "sector": "🔥 新模型速递",
-                    "priorityLevel": "P1",
-                    "publishDate": "2026-11-20"
-                }
-            ]
+            items = await fetch_hackernews_ai()
 
         elif channel_key == "devto":
-            items = [
-                {
-                    "title": "🌐 DEV.to 国际生态: 构建企业生产级 Agentic 工作流避坑指南 (2026实战)",
-                    "originalTitle": "Production-Ready Agentic Workflows: Lessons from 10M API Calls",
-                    "summary": "海外一线工程师详解多智能体路由、工具调用死循环熔断机制，以及如何将端侧轻量小模型与云端巨无霸模型进行双层级联，有效降低 78% 的生产算力开销。",
-                    "source": "DEV.to · 全球开发者专栏",
-                    "sourcePlatform": "devto",
-                    "sourceType": "article",
-                    "sector": "🌐 SaaS 商业化综合",
-                    "priorityLevel": "P1",
-                    "publishDate": "2026-11-20"
-                }
-            ]
+            items = await fetch_devto_ai()
+
+        elif channel_key == "releases":
+            items = await fetch_ai_project_releases()
 
         elif channel_key == "36kr":
             items = await fetch_36kr_ai_news()
@@ -126,7 +100,10 @@ async def fetch_single_channel_safe(channel_key: str, sector: str = "all") -> Di
                 x["sourcePlatform"] = "github"
 
         elif channel_key == "podcast":
-            items = get_all_podcast_intelligence()
+            items = await fetch_configured_podcast()
+            if items is None:
+                items = get_all_podcast_intelligence()
+                sample = True
             for x in items:
                 x["sector"] = x.get("sector") or "🎙️ 播客与财报原声"
                 x["sourcePlatform"] = x.get("sourcePlatform") or "xiaoyuzhou"
@@ -137,21 +114,22 @@ async def fetch_single_channel_safe(channel_key: str, sector: str = "all") -> Di
                 x["sector"] = x.get("sector") or "🌐 SaaS 商业化综合"
                 x["sourcePlatform"] = x.get("sourcePlatform") or "xiaohongshu"
 
-        elif channel_key == "social":
-            weibo_items = await fetch_weibo_ai_hot()
-            x_items = await fetch_x_thought_leaders()
-            items = weibo_items + x_items
-            for x in items:
-                x["sector"] = x.get("sector") or "🌐 SaaS 商业化综合"
-                x["sourcePlatform"] = x.get("sourcePlatform") or "weibo"
+        if sample:
+            items = [{**item, "provenance": "sample"} for item in items]
+        status = "EMPTY" if not items else "SAMPLE" if sample else "SUCCESS"
+        reason = {
+            "EMPTY": "未取得可用条目",
+            "SAMPLE": "使用内置样例，未连接实时来源",
+            "SUCCESS": f"成功拉取 {len(items)} 条情报",
+        }[status]
 
         latency_ms = int((time.perf_counter() - start_t) * 1000)
         return {
             "channel": channel_key,
-            "status": "SUCCESS",
+            "status": status,
             "latency_ms": latency_ms,
             "items_count": len(items),
-            "reason": f"成功拉取 {len(items)} 条情报",
+            "reason": reason,
             "items": items
         }
 
@@ -171,7 +149,7 @@ async def fetch_single_channel_safe(channel_key: str, sector: str = "all") -> Di
 async def crawl_omnichannel_with_telemetry(sector: str = "all") -> Dict[str, Any]:
     """
     Mandatory Omnichannel Sweep:
-    Queries ALL 9 ports concurrently without skipping any.
+    Queries the configured channels concurrently.
     Records per-channel status, latency, and skipping reasons.
     Re-ranks all gathered items by importance & sector relevance.
     """
@@ -225,6 +203,8 @@ async def crawl_omnichannel_with_telemetry(sector: str = "all") -> Dict[str, Any
             "scanned_channels": len(channel_keys),
             "successful_channels": sum(1 for r in channel_reports if r["status"] == "SUCCESS"),
             "skipped_channels": sum(1 for r in channel_reports if r["status"] == "SKIPPED"),
+            "sample_channels": sum(1 for r in channel_reports if r["status"] == "SAMPLE"),
+            "empty_channels": sum(1 for r in channel_reports if r["status"] == "EMPTY"),
             "channels": telemetry_channels
         }
     }
@@ -234,5 +214,5 @@ async def crawl_raw_intelligence(sector: str = "all", scope: str = "all") -> Lis
     Legacy wrapper maintaining backward compatibility for existing endpoints.
     """
     res = await crawl_omnichannel_with_telemetry(sector=sector)
-    return res["items"]
+    return [item for item in res["items"] if item.get("provenance") != "sample"]
 

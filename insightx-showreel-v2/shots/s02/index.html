@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Shot 02 — 选赛道与8卡门禁实操 (4.5-8.5s)</title>
+<style>
+  html, body { margin: 0; background: #FAF5E8; overflow: hidden; width: 100%; height: 100%; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script type="module">
+import { stageSize, setupCanvas } from './motion.js';
+import { loadUIImages } from './comic-kit.js';
+import { renderS02, S02_DUR } from './s02.js';
+
+const { W, H } = stageSize();
+const ctx = setupCanvas(document.getElementById('c'), W, H);
+const U = Math.min(W, H) / 1080;
+
+window.DUR = S02_DUR;
+window.READY = false;
+
+const IMGS = await loadUIImages(['onboarding', 'gatekeeper', 'telemetry']);
+
+window.render = t => {
+  ctx.save();
+  renderS02(ctx, t, W, H, U, IMGS);
+  ctx.restore();
+};
+
+window.render(0);
+window.READY = true;
+</script>
+</body>
+</html>

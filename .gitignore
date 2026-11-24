@@ -72,3 +72,12 @@ Thumbs.db
 tmp/
 temp/
 .cache/
+
+# Showreel build caches, QA frames & legacy drafts (keep core v2 source & poster; host MP4 via GitHub Releases)
+.showreel-progress/
+.showreel-editor/
+**/qa/
+insightx-showreel/
+insightx-showreel-redesign/
+insightx-showreel-v2/audio/*.wav
+*.mp4

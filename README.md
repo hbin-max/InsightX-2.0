@@ -3,6 +3,12 @@
 > **极简高信噪比的 AI 商业决策雷达**：新模型速递 · Token 经济学 · 播客长音频原声解密。  
 > 专为商业化产品经理、业务负责人及一级市场投资人打造。
 
+## 🎬 30 秒产品实操宣传片
+
+[![InsightX 2.0 30s Showreel](./insightx-showreel-v2/out/poster.png)](https://github.com/hbin-max/InsightX-2.0/releases/download/v2.0.0/InsightX-2.0-Showreel-30s.mp4)
+
+> 👆 点击上方封面图即可观看 / 下载 **1080p 30s 实操宣传片**（[直链下载 MP4](https://github.com/hbin-max/InsightX-2.0/releases/download/v2.0.0/InsightX-2.0-Showreel-30s.mp4) · 动效源码位于 [`insightx-showreel-v2/`](./insightx-showreel-v2)）。
+
 ---
 
 ## ✦ 核心定位与特色
@@ -35,9 +41,9 @@
 ## ⚡ 快速体验 (Quick Start)
 
 ### 方式一：前端纯客户端即开即用（无需安装任何环境）
-本项目前端采用纯单页高保真架构，无需复杂打包，内置丰富的离线高价值情报数据集：
+前端无需构建，可使用浏览器直连部分公开来源。采集不可用时会显示标有「样例」的内置卡片。
 1. 直接在电脑浏览器中双击打开 `frontend/index.html`；
-2. 即可体验完整的卡片滑动、Bento 参数格、ROI 动态测算滑块与原声波形播放；
+2. 可体验卡片滑动、Bento 参数格和基于同口径单价的 Token 成本推演；
 3. 点击右上角设置图标，可配置本地私有的大模型 API Key（仅存储于浏览器本地 `localStorage`）。
 
 ### 方式二：启动 Python FastAPI 后端服务
@@ -55,6 +61,8 @@ cp .env.example .env
 uvicorn app.main:app --reload --port 8000
 ```
 启动后访问 `http://localhost:8000/docs` 可查阅 OpenAPI / Swagger 接口文档。
+
+前端自动连接本机 8000 端口的聚合接口。在线渠道包括 Hacker News、DEV.to、vLLM 和 Transformers 官方发布，以及 Latent Space 的公开播客 RSS。播客卡可播放 RSS 提供的节目音频。若需换源，在 `backend/.env` 中设置 `PODCAST_RSS_URL`，并重启后端。
 
 ---
 
